@@ -311,7 +311,7 @@ function toLocalDateTime(value?: string | null) {
 }
 
 function getUseSubApiUrl(pluginId: string, uuid: string) {
-    return `${window.location.protocol}//${window.location.hostname}:8080/api/${pluginId}/useSub/${uuid}`
+    return `${window.location.origin}/api/${pluginId}/useSub/${uuid}`
 }
 
 function SubManageDialog({ open, form, onFormChange, title, saveCancelDeleteProps }: {

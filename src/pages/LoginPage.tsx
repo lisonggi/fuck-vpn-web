@@ -1,8 +1,8 @@
 import { Alert, Box, Button, TextField, Typography, useTheme } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { AuthApi } from "../api/AuthApi";
 import { ApiError } from "../api/Api";
+import { AuthApi } from "../api/AuthApi";
 
 export function LoginPage() {
 
@@ -12,7 +12,9 @@ export function LoginPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const theme = useTheme()
+
     const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
+
         event.preventDefault();
         setErrorMessage(null);
 
@@ -35,10 +37,11 @@ export function LoginPage() {
             setLoading(false);
         }
     };
-
+   
     const borderRadius = (Number(theme.shape.borderRadius) * 2) + "px"
     return (
         <div className="w-full h-dvh flex justify-center items-center">
+       
             <Box className="min-w-80 sm:min-w-100 flex flex-col gap-3 p-5" sx={{ borderBlockColor: "divider", borderRadius: borderRadius, boxShadow: theme.shadows[1] }}>
                 <div className="flex justify-center items-center">
                     <img src="/favicon.svg" alt="Login Icon" width={100} height={100} />

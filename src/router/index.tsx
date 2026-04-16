@@ -70,9 +70,8 @@ export const router = createBrowserRouter([
         },
         hydrateFallbackElement: <div>错误</div>
     },
-    { path: "*", element: <></>, loader: () => redirect("/404") },
     {
-        path: "404",
+        path: "*",
         Component: NotFoundPage
     }
 ]);

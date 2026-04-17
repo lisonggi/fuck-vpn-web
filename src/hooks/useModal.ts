@@ -1,22 +1,29 @@
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext } from "react"
+import type { JSX } from "react/jsx-runtime"
+import type { ModalItem } from "../providers/ModalProvider"
 
 
 export interface ModalOpenOptions {
-    show?: boolean
-    onClose?: () => void
+    onMaskClick?: (action: ModalActions) => void
 }
-
-export interface ModalControls {
-    open: () => void
-    close: () => void
+export interface ModalActions {
+    hide: () => void
+    remove: () => void
+    id: string
+}
+export interface ModalControl extends ModalActions {
+    show: () => void
 }
 
 export interface ModalContextType {
-    open: (
-        render: (close: () => void) => ReactNode,
-        options?: ModalOpenOptions
-    ) => ModalControls
-    close: (id: number) => void
+    create: (content: (action: ModalActions) => JSX.Element, options?: ModalOpenOptions) => ModalControl
+    show: (id: string) => void
+    showAll: () => void
+    hide: (id: string) => void
+    hideAll: () => void
+    remove: (id: string) => void
+    removeAll: () => void
+    modals: Map<string, ModalItem>
 }
 
 export const ModalContext = createContext<ModalContextType | null>(null)
@@ -24,10 +31,22 @@ export const ModalContext = createContext<ModalContextType | null>(null)
 export function useModal() {
     const context = useContext(ModalContext)
     if (!context) {
-        throw new Error("ModalProvider 未初始化")
+        throw new Error("ModalProvider Not initialized")
     }
-
+    const open = (content: (action: ModalActions) => JSX.Element, options?: ModalOpenOptions): ModalControl => {
+        const modal = context.create(content, options)
+        context.show(modal.id)
+        return modal
+    }
     return {
-        create: context.open,
+        open: open,
+        create: context.create,
+        show: context.show,
+        showAll: context.showAll,
+        hide: context.hide,
+        hideAll: context.hideAll,
+        remove: context.remove,
+        removeAll: context.showAll,
+        modals: context.modals
     }
 }

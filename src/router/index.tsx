@@ -9,6 +9,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PluginPage } from "../pages/PluginPage";
 import { SecurityPage } from "../pages/SecurityPage";
+import { TestPage } from "../pages/TestPage";
 
 export const adminChildren: RouteObject[] = [
     {
@@ -40,7 +41,7 @@ export const router = createBrowserRouter([
     {
         path: "/",
         element: <></>,
-        loader: () => redirect("/admin")
+        loader: () => redirect("/test")
     },
     {
         path: "/login",
@@ -69,6 +70,10 @@ export const router = createBrowserRouter([
             }
         },
         hydrateFallbackElement: <div>错误</div>
+    },
+    {
+        path: "/test",
+        Component: TestPage
     },
     {
         path: "*",

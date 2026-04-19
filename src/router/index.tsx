@@ -1,15 +1,13 @@
 import { Typography } from "@mui/material";
 import { createBrowserRouter, redirect, type RouteObject, } from "react-router";
 import { AuthApi, type Token } from "../api/AuthApi";
-import FlashOnIcon from "../assets/icons/FlashOnIcon";
-import HomeIcon from "../assets/icons/HomeIcon";
-import SecurityIcon from "../assets/icons/SecurityIcon";
 import { AdminPage } from "../pages/AdminPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PluginPage } from "../pages/PluginPage";
 import { SecurityPage } from "../pages/SecurityPage";
 import { TestPage } from "../pages/TestPage";
+import { HomeIcon, SecurityIcon, FlashOnIcon } from "../assets/icons/Icons";
 
 export const adminChildren: RouteObject[] = [
     {
@@ -41,7 +39,7 @@ export const router = createBrowserRouter([
     {
         path: "/",
         element: <></>,
-        loader: () => redirect("/test")
+        loader: () => redirect("/admin")
     },
     {
         path: "/login",
@@ -54,7 +52,8 @@ export const router = createBrowserRouter([
                 return null;
             }
         },
-        hydrateFallbackElement: <div>错误</div>
+        hydrateFallbackElement: <div>加载中</div>,
+        errorElement: <div>错误</div>,
     },
     {
         path: "/admin",
@@ -69,7 +68,8 @@ export const router = createBrowserRouter([
                 return redirect("/login")
             }
         },
-        hydrateFallbackElement: <div>错误</div>
+        hydrateFallbackElement: <div>加载中</div>,
+        errorElement: <div>错误</div>,
     },
     {
         path: "/test",

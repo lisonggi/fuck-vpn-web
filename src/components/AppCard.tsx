@@ -1,7 +1,7 @@
 import { Box, useTheme } from "@mui/material"
 import { AppTitleBar } from "./AppTitleBar"
 
-export function AppCard({ title, actionCompose, children, className ,titleClassName}: { title: string, actionCompose?: React.ReactElement, children?: React.ReactNode, className?: string, titleClassName?: string }) {
+export function AppCard({ title = "title", actionCompose, children, className, titleClassName }: { title?: string, actionCompose?: React.ReactElement, children?: React.ReactNode, className?: string, titleClassName?: string }) {
     const theme = useTheme()
     const borderRadius = (Number(theme.shape.borderRadius) * 2) + "px"
     return <Box className={className} sx={{ borderBlockColor: "divider", borderRadius: borderRadius, boxShadow: theme.shadows[1] }}>
@@ -9,6 +9,12 @@ export function AppCard({ title, actionCompose, children, className ,titleClassN
             borderTopRightRadius: borderRadius,
             borderTopLeftRadius: borderRadius,
         }} actionCompose={actionCompose} />
-        {children}
+        <Box sx={{
+            backgroundColor: "background.paper",
+            borderBottomLeftRadius: borderRadius,
+            borderBottomRightRadius: borderRadius,
+        }}>
+            {children}
+        </Box>
     </Box>
 }

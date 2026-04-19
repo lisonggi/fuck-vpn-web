@@ -60,7 +60,7 @@ export function SecurityPage() {
                     {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
                     {successMessage && <Alert severity="success">{successMessage}</Alert>}
                     <TextField
-                        label="用户名"
+                        label="新用户名"
                         variant="outlined"
                         size="small"
                         value={username}

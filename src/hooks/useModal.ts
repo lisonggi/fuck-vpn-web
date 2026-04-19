@@ -6,6 +6,9 @@ import type { ModalItem } from "../providers/ModalProvider"
 export interface ModalOpenOptions {
     onMaskClick?: (action: ModalActions) => void
 }
+
+export type ContentType = (action: ModalActions) => JSX.Element
+
 export interface ModalActions {
     hide: () => void
     remove: () => void
@@ -16,7 +19,7 @@ export interface ModalControl extends ModalActions {
 }
 
 export interface ModalContextType {
-    create: (content: (action: ModalActions) => JSX.Element, options?: ModalOpenOptions) => ModalControl
+    create: (content: ContentType, options?: ModalOpenOptions) => ModalControl
     show: (id: string) => void
     showAll: () => void
     hide: (id: string) => void
@@ -33,7 +36,7 @@ export function useModal() {
     if (!context) {
         throw new Error("ModalProvider Not initialized")
     }
-    const open = (content: (action: ModalActions) => JSX.Element, options?: ModalOpenOptions): ModalControl => {
+    const open = (content: ContentType, options?: ModalOpenOptions): ModalControl => {
         const modal = context.create(content, options)
         context.show(modal.id)
         return modal

@@ -1,23 +1,63 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
+import { Button, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLoaderData, useMatches, useNavigate } from "react-router";
 import { AuthApi } from "../api/AuthApi";
 import { PluginApi, type PluginInfo, type UpdateStateConfig } from "../api/PluginApi";
-import InfoIcon from "../assets/icons/InfoIcon";
-import MenuIcon from "../assets/icons/MenuIcon";
-import PowerIcon from "../assets/icons/PowerIcon";
+import { AppCard } from "../components/AppCard";
 import { AppLayout } from "../components/AppLayout";
 import type { AppTitleBarProps } from "../components/AppTitleBar";
 import { LoadingIconButtion } from "../components/LoadingIconButtion";
 import type { MenuDrawerProps, MenuGroup, MenuItem } from "../components/MenuDrawer";
 import { PluginNotEnabled } from "../components/PluginNotEnabled";
+import { useModal } from "../hooks/useModal";
 import { adminChildren } from "../router";
 import { LoadingPage } from "./LoadingPage";
+import { InfoIcon, MenuIcon, PowerIcon } from "../assets/icons/Icons";
 
 const PLUGIN_QUERY_KEY = "getAllPlugin"
+function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: PluginInfo }) {
+    return <AppCard title="插件信息">
+        <div className="flex flex-col items-center p-3 px-10 gap-3">
+            <Typography component="div">
+                <div className="grid grid-cols-[auto_auto_1fr] gap-x-3 p-3 border-gray-200 border-dashed border-2 rounded-md  text-nowrap">
+                    <div className="text-gray-500">名称</div>
+                    <div>:</div>
+                    <div>{pluginInfo.info.name}</div>
 
+                    <div className="text-gray-500">ID</div>
+                    <div>:</div>
+                    <div>{pluginInfo.info.id}</div>
+
+                    <div className="text-gray-500">启用状态</div>
+                    <div>:</div>
+                    <div>{pluginInfo.enabled ? "已启用" : "已禁用"}</div>
+
+                    <div className="text-gray-500">插件类型</div>
+                    <div>:</div>
+                    <div>{pluginInfo?.keyService ? "节点+密钥" : "节点"}</div>
+
+                    <div className="text-gray-500">版本</div>
+                    <div>:</div>
+                    <div>{pluginInfo?.info.version}</div>
+
+                    <div className="text-gray-500">作者</div>
+                    <div>:</div>
+                    <div>{pluginInfo?.info.author || "未知"}</div>
+
+                    <div className="text-gray-500">描述</div>
+                    <div>:</div>
+                    <div>{pluginInfo?.info.description || "无描述"}</div>
+                </div>
+            </Typography>
+            <Button className="flex-1 w-full" variant="contained" onClick={() => remove()}>
+                好的
+            </Button>
+        </div>
+    </AppCard>
+}
 export function AdminPage() {
+    const modal = useModal()
     const { token } = useLoaderData();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const queryClient = useQueryClient();
@@ -42,7 +82,6 @@ export function AdminPage() {
     })
     const matches = useMatches();
     const navigate = useNavigate()
-    const [infoDialogOpen, setInfoDialogOpen] = useState(false)
 
     const menuGroup = useMemo<MenuGroup[]>(() => {
         const baseMenuItems: MenuItem[] = [];
@@ -61,7 +100,7 @@ export function AdminPage() {
                 });
             } else {
                 baseMenuItems.push({
-                    path: children.path ?? "/",
+                    path: children.path ?? "",
                     name: children.handle.name,
                     icon: <Icon color="primary" />,
                 });
@@ -73,10 +112,7 @@ export function AdminPage() {
     const selectedItem: MenuItem | undefined = useMemo(() => {
         const allMenuItems = menuGroup.flatMap((group) => group.menuItems)
         const currentMatch = matches[matches.length - 1].pathname
-        let path = currentMatch.replace(matches[0].pathname + "/", "")
-        if (path === "") {
-            path = "/"
-        }
+        const path = currentMatch.replace(matches[0].pathname + "/", "")
         return allMenuItems.find(item => item.path === path)
     }, [menuGroup, matches])
 
@@ -126,7 +162,11 @@ export function AdminPage() {
             setClosePluginButtonLoading(false)
         })
     }
-
+    const openInfoModal = () => {
+        if (pluginInfo) {
+            modal.open(({ remove }) => (<InfoModal remove={remove} pluginInfo={pluginInfo} />))
+        }
+    }
     const appTitleBarProps: AppTitleBarProps = {
         title: selectedItem.name,
         menuCompose: (
@@ -138,12 +178,12 @@ export function AdminPage() {
         actionCompose: pluginInfo ? (
             <div className="flex items-center gap-1">
                 <Tooltip title="插件信息">
-                    <IconButton sx={{ color: theme.palette.primary.contrastText }} onClick={() => setInfoDialogOpen(true)}>
+                    <IconButton sx={{ color: theme.palette.primary.contrastText }} onClick={() => openInfoModal()}>
                         <InfoIcon />
                     </IconButton>
                 </Tooltip>
                 {pluginInfo.enabled && (
-                    <LoadingIconButtion Icon={PowerIcon} color={theme.palette.primary.contrastText} loading={closePluginButtonLoading} onClick={handelLoadingIconButtionClick} tip="停用此插件" />
+                    <LoadingIconButtion Icon={PowerIcon} loading={closePluginButtonLoading} onClick={handelLoadingIconButtionClick} tip="停用此插件" />
                 )}
             </div>
         ) : undefined
@@ -152,39 +192,6 @@ export function AdminPage() {
     return (<div className="h-dvh w-full">
         <AppLayout menuDrawerProps={menuDrawerProps} appTitleBarProps={appTitleBarProps}>
             {pluginInfo === undefined || pluginInfo.enabled ? <Outlet context={pluginInfo} /> : <PluginNotEnabled onEnabledClick={() => updateStateConfig(selectedItem.path, true)}></PluginNotEnabled>}
-            <Dialog open={infoDialogOpen} onClose={() => setInfoDialogOpen(false)}>
-                <DialogTitle sx={{ backgroundColor: "primary.main", color: "primary.contrastText" }}>
-                    插件信息
-                </DialogTitle>
-                <DialogContent className="p-3 min-w-80">
-                    <Typography variant="subtitle1" gutterBottom>
-                        插件 名称:{pluginInfo?.info.name}
-                    </Typography>
-                    <Typography variant="body2" gutterBottom>
-                        插件 ID:{pluginInfo?.info.id}
-                    </Typography>
-                    <Typography variant="body2" gutterBottom>
-                        启用状态:{pluginInfo?.enabled ? "已启用" : "已禁用"}
-                    </Typography>
-                    <Typography variant="body2" gutterBottom>
-                        是否为密钥服务:{pluginInfo?.keyService ? "是" : "否"}
-                    </Typography>
-
-                    <Typography variant="body2" gutterBottom>
-                        版本:{pluginInfo?.info.version}
-                    </Typography>
-                    <Typography variant="body2" gutterBottom>
-                        作者:{pluginInfo?.info.author || "未知"}
-                    </Typography>
-
-                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                        描述:{pluginInfo?.info.description || "无描述"}
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setInfoDialogOpen(false)}>关闭</Button>
-                </DialogActions>
-            </Dialog>
         </AppLayout>
     </div>)
 }

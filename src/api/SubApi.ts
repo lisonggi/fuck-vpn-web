@@ -5,7 +5,7 @@ export interface SubConfig {
 }
 
 export interface Subscription {
-    name: string | null
+    name?: string
     enabled: boolean
     expireAt: string | null
     usageLimit: number | null
@@ -19,13 +19,6 @@ export interface SubData {
 export interface SubRecord {
     ip: string
     time: number
-}
-
-export type SubRequest = {
-    name?: string
-    enabled?: boolean
-    expireAt?: string | null
-    usageLimit?: number | null
 }
 
 export const SubApi = (id: string) => {
@@ -47,7 +40,7 @@ export const SubApi = (id: string) => {
         return result.body as Record<string, Subscription>
     }
 
-    const addSub = async (subscription: SubRequest) => {
+    const addSub = async (subscription: Subscription) => {
         const result = await AppApi<Result<SubData>>(`/${id}/addSub`, {
             method: "POST",
             body: JSON.stringify(subscription)
@@ -65,10 +58,10 @@ export const SubApi = (id: string) => {
         return result.body as SubRecord[]
     }
 
-    const updateSub = async (uuid: string, subscription: SubRequest) => {
-        const result = await AppApi<Result<SubData>>(`/${id}/updateSub/${uuid}`, {
+    const updateSub = async (subData:SubData) => {
+        const result = await AppApi<Result<SubData>>(`/${id}/updateSub/${subData.uuid}`, {
             method: "PUT",
-            body: JSON.stringify(subscription)
+            body: JSON.stringify(subData.subscription)
         })
         return result.body as SubData
     }

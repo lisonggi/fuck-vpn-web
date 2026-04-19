@@ -1,15 +1,25 @@
 import { Button, TextField } from "@mui/material";
 import { useState } from "react";
 import { useModal } from "../hooks/useModal";
-function ModalContent({ remove, str, onChange }: { remove: () => void, str: string, onChange: (v: string) => void }) {
+function ModalContent({ remove }: { remove: () => void }) {
+    const modal = useModal()
+    const [str, setStr] = useState("")
+    const handelRepeatClick = () => {
+        modal.open(({ remove }) => (
+            <ModalContent remove={remove} />
+        ))
+    }
     return (
-        <div className=" bg-yellow-50 p-3">
+        <div className=" bg-yellow-50 p-3 flex flex-col gap-3">
             <TextField
                 value={str}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(e) => setStr(e.target.value)}
                 label="测试编辑框"
             />
-            <Button onClick={remove}>
+            <Button variant="contained" onClick={handelRepeatClick}>
+                再开一个
+            </Button>
+            <Button variant="contained" onClick={remove}>
                 卸载模态框
             </Button>
         </div>
@@ -17,14 +27,35 @@ function ModalContent({ remove, str, onChange }: { remove: () => void, str: stri
 }
 
 export function TestPage() {
+    fetch("/api/testGet", {
+        method: "GET",
+    }).then((response) => {
+        console.log("testGetStatus", response.status)
+    }).catch((err) => {
+        if (err instanceof Error) {
+            console.log(err.message)
+        }
+    })
+
+    fetch("/api/testPost", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+    }).then((response) => {
+        console.log("testPostStatus", response.status)
+    }).catch((err) => {
+        if (err instanceof Error) {
+            console.log(err.message)
+        }
+    })
+
     const modal = useModal()
-    const [str, setStr] = useState("")
 
     function handelClick() {
-        const a = modal.create(({ remove }) => (
-            <ModalContent remove={remove} str={str} onChange={(v) => setStr(v)} />
+        modal.open(({ remove }) => (
+            <ModalContent remove={remove} />
         ))
-        a.show()
     }
 
     return <div className="h-dvh w-dvw">

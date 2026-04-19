@@ -1,8 +1,8 @@
-import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography } from "@mui/material";
+import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, useTheme } from "@mui/material";
 import { useState } from "react";
 import { Fragment, type JSX } from "react/jsx-runtime";
-import LogoutIcon from "../assets/icons/LogoutIcon";
 import { LoadingIconButtion } from "./LoadingIconButtion";
+import { LogoutIcon } from "../assets/icons/Icons";
 
 export interface MenuGroup {
     menuItems: MenuItem[]
@@ -29,6 +29,7 @@ export function MenuDrawer({ menuGroup, selectedItem, open, onClose, onItemclick
         setIsLoggingOut(true);
         await onLogoutClick().finally(() => { setIsLoggingOut(false) });
     };
+    const theme = useTheme()
     return (
         <Drawer open={open} onClose={onClose}>
             <Box className={"flex flex-col flex-1"} sx={{ width: 250 }} role="presentation" onClick={onClose}>
@@ -67,7 +68,7 @@ export function MenuDrawer({ menuGroup, selectedItem, open, onClose, onItemclick
                     <div className="flex-1">
                         {username}
                     </div>
-                    <LoadingIconButtion tip="注销登陆" loading={isLoggingOut} Icon={LogoutIcon} onClick={handleLogoutClick} />
+                    <LoadingIconButtion color={theme.palette.primary.main} tip="注销登陆" loading={isLoggingOut} Icon={LogoutIcon} onClick={handleLogoutClick} />
                 </Typography>
             </Box>
         </Drawer>

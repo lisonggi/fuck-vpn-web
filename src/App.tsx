@@ -14,13 +14,13 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ModalProvider>
-      <SnackbarProvider autoHideDuration={2000} anchorOrigin={{ horizontal: "center", vertical: "top" }} >
-        <QueryClientProvider client={queryClient} >
+    <QueryClientProvider client={queryClient} >
+      <ModalProvider>
+        <SnackbarProvider autoHideDuration={2000} anchorOrigin={{ horizontal: "center", vertical: "top" }} >
           <RouterProvider router={router} />
-        </QueryClientProvider>
-      </SnackbarProvider>
-    </ModalProvider>
+        </SnackbarProvider>
+      </ModalProvider>
+    </QueryClientProvider>
   )
 }
 

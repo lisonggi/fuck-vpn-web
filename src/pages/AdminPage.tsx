@@ -1,60 +1,56 @@
-import { Button, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
+import { IconButton, Tooltip, Typography, useTheme } from "@mui/material";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLoaderData, useMatches, useNavigate } from "react-router";
 import { AuthApi } from "../api/AuthApi";
 import { PluginApi, type PluginInfo, type UpdateStateConfig } from "../api/PluginApi";
-import { AppCard } from "../components/AppCard";
-import { AppLayout } from "../components/AppLayout";
-import type { AppTitleBarProps } from "../components/AppTitleBar";
-import { LoadingIconButtion } from "../components/LoadingIconButtion";
-import type { MenuDrawerProps, MenuGroup, MenuItem } from "../components/MenuDrawer";
+import { InfoIcon, MenuIcon, PowerIcon } from "../assets/icons/Icons";
+import { AcitonCard } from "../components/AcitonCard";
+import { type AcitonBarProps } from "../components/ActionBar";
+import { AppWindow } from "../components/AppWindow";
+import { MenuDrawer, type MenuDrawerProps, type MenuGroup, type MenuItem } from "../components/MenuDrawer";
 import { PluginNotEnabled } from "../components/PluginNotEnabled";
 import { useModal } from "../hooks/useModal";
 import { adminChildren } from "../router";
 import { LoadingPage } from "./LoadingPage";
-import { InfoIcon, MenuIcon, PowerIcon } from "../assets/icons/Icons";
+import { LoadingIconButtion } from "../components/LoadingIconButtion";
 
 const PLUGIN_QUERY_KEY = "getAllPlugin"
 function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: PluginInfo }) {
-    return <AppCard title="插件信息">
-        <div className="flex flex-col items-center p-3 px-10 gap-3">
-            <Typography component="div">
-                <div className="grid grid-cols-[auto_auto_1fr] gap-x-3 p-3 border-gray-200 border-dashed border-2 rounded-md  text-nowrap">
-                    <div className="text-gray-500">名称</div>
-                    <div>:</div>
-                    <div>{pluginInfo.info.name}</div>
+    return <AppWindow title="插件信息" closeWindow={{ onClose: () => remove() }}>
+        <Typography component="div" className="p-3">
+            <div className="grid grid-cols-[auto_auto_1fr] gap-x-3 p-3 border-gray-200 border-dashed border-2 rounded-md  text-nowrap">
+                <div className="text-gray-500">名称</div>
+                <div>:</div>
+                <div>{pluginInfo.info.name}</div>
 
-                    <div className="text-gray-500">ID</div>
-                    <div>:</div>
-                    <div>{pluginInfo.info.id}</div>
+                <div className="text-gray-500">ID</div>
+                <div>:</div>
+                <div>{pluginInfo.info.id}</div>
 
-                    <div className="text-gray-500">启用状态</div>
-                    <div>:</div>
-                    <div>{pluginInfo.enabled ? "已启用" : "已禁用"}</div>
+                <div className="text-gray-500">启用状态</div>
+                <div>:</div>
+                <div>{pluginInfo.enabled ? "已启用" : "已禁用"}</div>
 
-                    <div className="text-gray-500">插件类型</div>
-                    <div>:</div>
-                    <div>{pluginInfo?.keyService ? "节点+密钥" : "节点"}</div>
+                <div className="text-gray-500">插件类型</div>
+                <div>:</div>
+                <div>{pluginInfo?.keyService ? "节点+密钥" : "节点"}</div>
 
-                    <div className="text-gray-500">版本</div>
-                    <div>:</div>
-                    <div>{pluginInfo?.info.version}</div>
+                <div className="text-gray-500">版本</div>
+                <div>:</div>
+                <div>{pluginInfo?.info.version}</div>
 
-                    <div className="text-gray-500">作者</div>
-                    <div>:</div>
-                    <div>{pluginInfo?.info.author || "未知"}</div>
+                <div className="text-gray-500">作者</div>
+                <div>:</div>
+                <div>{pluginInfo?.info.author || "未知"}</div>
 
-                    <div className="text-gray-500">描述</div>
-                    <div>:</div>
-                    <div>{pluginInfo?.info.description || "无描述"}</div>
-                </div>
-            </Typography>
-            <Button className="flex-1 w-full" variant="contained" onClick={() => remove()}>
-                好的
-            </Button>
-        </div>
-    </AppCard>
+                <div className="text-gray-500">描述</div>
+                <div>:</div>
+                <div>{pluginInfo?.info.description || "无描述"}</div>
+            </div>
+        </Typography>
+
+    </AppWindow>
 }
 export function AdminPage() {
     const modal = useModal()
@@ -167,15 +163,13 @@ export function AdminPage() {
             modal.open(({ remove }) => (<InfoModal remove={remove} pluginInfo={pluginInfo} />))
         }
     }
-    const appTitleBarProps: AppTitleBarProps = {
-        title: selectedItem.name,
-        menuCompose: (
-            <IconButton onClick={() => setIsMenuOpen(true)} sx={{
-                backgroundColor: "primary.main"
-            }}>
-                <MenuIcon sx={{ color: "primary.contrastText" }} />
-            </IconButton>),
-        actionCompose: pluginInfo ? (
+    const acitonBarProps: AcitonBarProps = {
+        title: selectedItem.name, menu: <IconButton onClick={() => setIsMenuOpen(true)} sx={{
+            backgroundColor: "primary.main"
+        }}>
+            <MenuIcon sx={{ color: "primary.contrastText" }} />
+        </IconButton>
+        , action: pluginInfo ? (
             <div className="flex items-center gap-1">
                 <Tooltip title="插件信息">
                     <IconButton sx={{ color: theme.palette.primary.contrastText }} onClick={() => openInfoModal()}>
@@ -183,15 +177,15 @@ export function AdminPage() {
                     </IconButton>
                 </Tooltip>
                 {pluginInfo.enabled && (
-                    <LoadingIconButtion Icon={PowerIcon} loading={closePluginButtonLoading} onClick={handelLoadingIconButtionClick} tip="停用此插件" />
+                    <LoadingIconButtion icon={PowerIcon} loading={closePluginButtonLoading} onClick={handelLoadingIconButtionClick} tip="停用此插件" />
                 )}
             </div>
         ) : undefined
     }
-
     return (<div className="h-dvh w-full">
-        <AppLayout menuDrawerProps={menuDrawerProps} appTitleBarProps={appTitleBarProps}>
+        <AcitonCard className="size-full" acitonBarProps={acitonBarProps}>
             {pluginInfo === undefined || pluginInfo.enabled ? <Outlet context={pluginInfo} /> : <PluginNotEnabled onEnabledClick={() => updateStateConfig(selectedItem.path, true)}></PluginNotEnabled>}
-        </AppLayout>
+        </AcitonCard>
+        <MenuDrawer {...menuDrawerProps} />
     </div>)
 }

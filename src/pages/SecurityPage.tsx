@@ -81,7 +81,7 @@ export function SecurityPage() {
                         helperText="请输入新密码。"
                     />
                     <Button type="submit" variant="contained" size="large" disabled={loading} fullWidth>
-                        {loading ? "保存中..." : "保存修改"}
+                        {loading ? "保存中..." : "保存"}
                     </Button>
                 </Box>
             </Box>

@@ -5,9 +5,9 @@ export interface SubConfig {
 }
 
 export interface Subscription {
-    name?: string
+    name: string
     enabled: boolean
-    expireAt: string | null
+    expireAt: number | null
     usageLimit: number | null
 }
 
@@ -48,17 +48,12 @@ export const SubApi = (id: string) => {
         return result.body as SubData
     }
 
-    const getSub = async (uuid: string) => {
-        const result = await AppApi<Result<SubData>>(`/${id}/getSub/${uuid}`)
-        return result.body as SubData
-    }
-
     const getRecords = async (uuid: string) => {
         const result = await AppApi<Result<SubRecord[]>>(`/${id}/getRecords/${uuid}`)
         return result.body as SubRecord[]
     }
 
-    const updateSub = async (subData:SubData) => {
+    const updateSub = async (subData: SubData) => {
         const result = await AppApi<Result<SubData>>(`/${id}/updateSub/${subData.uuid}`, {
             method: "PUT",
             body: JSON.stringify(subData.subscription)
@@ -66,7 +61,7 @@ export const SubApi = (id: string) => {
         return result.body as SubData
     }
 
-    const removeSub = async (uuid: string) => {
+    const deleteSub = async (uuid: string) => {
         const result = await AppApi<Result<SubData>>(`/${id}/removeSub/${uuid}`, {
             method: "DELETE"
         })
@@ -78,9 +73,8 @@ export const SubApi = (id: string) => {
         updateSubConfig,
         getAllSub,
         addSub,
-        getSub,
         getRecords,
         updateSub,
-        removeSub,
+        deleteSub,
     }
 }

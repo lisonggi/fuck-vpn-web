@@ -1,14 +1,21 @@
-import { CircularProgress, IconButton, Tooltip, useTheme } from "@mui/material";
-import { type ElementType } from "react";
-import { DefaultIcon } from "../assets/icons/Icons";
+import { CircularProgress } from "@mui/material";
+import { useState } from "react";
+import { AppIconButton, type AppIconButtonProps } from "./AppIconButton";
 
-export function LoadingIconButtion({ Icon = DefaultIcon, color, size = "24px", loading = false, onClick = async () => { }, tip = "tip" }: { Icon?: ElementType, color?: string, size?: string, loading?: boolean, onClick?: () => void | Promise<void>, tip?: string }) {
-    const theme = useTheme()
-    return <Tooltip title={tip}>
-        <span>
-            <IconButton disabled={loading} sx={{ color: color ?? theme.palette.primary.contrastText }} onClick={onClick}>
-                {!loading ? <Icon sx={{ size: size }} /> : <CircularProgress sx={{ color: color ?? theme.palette.primary.contrastText }} size={size} aria-label="Loading…" />}
-            </IconButton>
-        </span>
-    </Tooltip>
+
+export function LoadingIconButtion({ onClick, loading: controlledLoading, iconSize = "24px", sx, ...props }: AppIconButtonProps & { onClick?: () => Promise<void>, loading?: boolean, iconSize?: string }) {
+    const [innerLoading, setInnerLoading] = useState(false)
+
+    const loading =
+        controlledLoading !== undefined
+            ? controlledLoading
+            : innerLoading
+
+    const handleClick = () => {
+        if (onClick) {
+            setInnerLoading(true)
+            onClick().finally(() => { setInnerLoading(false) })
+        }
+    }
+    return <AppIconButton {...props} disabled={loading} onClick={() => handleClick()} sx={{ fontSize: iconSize, ...sx }} icon={!loading ? props.icon : <CircularProgress size={iconSize} sx={{ color: "inherit" }} aria-label="Loading…" />} />
 }

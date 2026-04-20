@@ -1,20 +1,10 @@
-import { Box, useTheme } from "@mui/material"
-import { AppTitleBar } from "./AppTitleBar"
+import { Box, useTheme, type SxProps } from "@mui/material";
+import type { ReactNode } from "react";
 
-export function AppCard({ title = "title", actionCompose, children, className, titleClassName }: { title?: string, actionCompose?: React.ReactElement, children?: React.ReactNode, className?: string, titleClassName?: string }) {
+export function AppCard({ children = <div>this is card</div>, sx, className }: { children: ReactNode, sx?: SxProps, className?: string }) {
     const theme = useTheme()
     const borderRadius = (Number(theme.shape.borderRadius) * 2) + "px"
-    return <Box className={className} sx={{ borderBlockColor: "divider", borderRadius: borderRadius, boxShadow: theme.shadows[1] }}>
-        <AppTitleBar title={title} className={titleClassName} boxSx={{
-            borderTopRightRadius: borderRadius,
-            borderTopLeftRadius: borderRadius,
-        }} actionCompose={actionCompose} />
-        <Box sx={{
-            backgroundColor: "background.paper",
-            borderBottomLeftRadius: borderRadius,
-            borderBottomRightRadius: borderRadius,
-        }}>
-            {children}
-        </Box>
+    return <Box className={className} sx={{ overflow: "auto", borderBlockColor: "divider", borderRadius: borderRadius, width: "fit-content", boxShadow: theme.shadows[1], ...sx }}>
+        <div className="size-full">{children}</div>
     </Box>
 }

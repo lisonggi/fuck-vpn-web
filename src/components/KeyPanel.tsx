@@ -2,12 +2,14 @@ import { Button, Divider, FormControlLabel, Switch, TextField, Typography } from
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { KeyApi, type KeyConfig } from "../api/KeyApi";
+import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
-import { AppCard } from "./AppCard";
+import { AcitonCard } from "./AcitonCard";
+import { AppIconButton } from "./AppIconButton";
+import { AppWindow } from "./AppWindow";
 import { EmptyState } from "./EmptyState";
 import { IconText } from "./IconText";
 import { LoadingIconButtion } from "./LoadingIconButtion";
-import { SettingsIcon, RefreshIcon, HourglassIcon } from "../assets/icons/Icons";
 
 
 function SettingsModal({ config, remove, onSave }: { config: KeyConfig, remove: () => void, onSave: (config: KeyConfig) => Promise<void> }) {
@@ -24,8 +26,7 @@ function SettingsModal({ config, remove, onSave }: { config: KeyConfig, remove: 
     const isChanges = useMemo(() => {
         return JSON.stringify(newConfig) !== JSON.stringify(config)
     }, [config, newConfig])
-    return <AppCard title={"密钥配置"} >
-
+    return <AppWindow title="密钥配置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
         <div className="p-3 min-w-80">
             <Typography sx={{ fontSize: "0.9rem" }}>开启时密钥不足时系统将自动补充</Typography>
             <div className="flex flex-col gap-3">
@@ -52,11 +53,10 @@ function SettingsModal({ config, remove, onSave }: { config: KeyConfig, remove: 
                 />
                 <div className="flex gap-3 justify-end">
                     <Button disabled={!isChanges} loading={saveLoading} color="success" variant="contained" onClick={handelSave}>保存</Button>
-                    <Button disabled={saveLoading} variant="contained" onClick={() => remove()}>取消</Button>
                 </div>
             </div>
         </div>
-    </AppCard>
+    </AppWindow >
 }
 
 export function KeyPanel({ pluginId }: { pluginId: string }) {
@@ -99,35 +99,31 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
     const openSettingsModal = () => {
         if (stateQuery.isSuccess) {
-            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data?.keyConfig} remove={remove} save={(config) => updateKeyConfig.mutateAsync(config)} />), {
+            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data?.keyConfig} remove={remove} onSave={(config) => updateKeyConfig.mutateAsync(config)} />), {
                 onMaskClick: () => { }
             })
         }
     }
 
-    const ActionButtons = () => {
-        return stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
-            <LoadingIconButtion onClick={openSettingsModal} Icon={SettingsIcon} tip="设置" />
-            <LoadingIconButtion onClick={refreshKeys.mutateAsync} loading={stateQuery.data.checking} Icon={RefreshIcon} tip="重新获取" />
+    return <AcitonCard className="w-full" acitonBarProps={{
+        title: "密钥", action: stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
+            <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
+            <LoadingIconButtion onClick={() => refreshKeys.mutateAsync()} loading={stateQuery.data.checking} icon={RefreshIcon} tip="重新获取" />
         </>
-    }
+    }}>
+        {dataQuery.isLoading ?
+            <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> :
+            dataQuery.isError ? <IconText Icon={HourglassIcon} text="加载失败" color="primary" /> :
+                dataQuery.data.length === 0 ? <EmptyState tip="没有数据" /> :
+                    <div>{dataQuery.data.map((value, index) => {
+                        return <div key={value}>
+                            {index > 0 && <Divider />}
+                            <Typography className="px-3 py-1 whitespace-pre-wrap">
+                                {value}
+                            </Typography>
+                        </div>
+                    })}
+                    </div>}
+    </AcitonCard>
 
-
-    return <>
-        <AppCard title="密钥" actionCompose={<ActionButtons />}>
-            {dataQuery.isLoading ?
-                <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> :
-                dataQuery.isError ? <IconText Icon={HourglassIcon} text="加载失败" color="primary" /> :
-                    dataQuery.data.length === 0 ? <EmptyState tip="没有数据" /> :
-                        <div>{dataQuery.data.map((value, index) => {
-                            return <div key={value}>
-                                {index > 0 && <Divider />}
-                                <Typography className="px-3 py-1 whitespace-pre-wrap">
-                                    {value}
-                                </Typography>
-                            </div>
-                        })}
-                        </div>}
-        </AppCard>
-    </>
 }

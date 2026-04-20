@@ -1,4 +1,4 @@
-import { Button, Divider, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography } from "@mui/material"
+import { Box, Button, Divider, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography } from "@mui/material"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { enqueueSnackbar } from "notistack"
 import { useMemo, useState } from "react"
@@ -7,14 +7,26 @@ import { SubApi, type SubConfig, type SubData, type Subscription } from "../api/
 import { CopyIcon, DocsIcon, HourglassIcon, PowerIcon, SettingsIcon } from "../assets/icons/Icons"
 
 import { useModal } from "../hooks/useModal"
-import { AppCard } from "./AppCard"
+import { AcitonCard } from "./AcitonCard"
+import { AppIconButton } from "./AppIconButton"
+import { AppWindow } from "./AppWindow"
 import { EmptyState } from "./EmptyState"
 import { IconText } from "./IconText"
-import { LoadingIconButtion } from "./LoadingIconButtion"
 
 
 function getUseSubApiUrl(pluginId: string, uuid: string) {
     return `${window.location.origin}/api/${pluginId}/useSub/${uuid}`
+}
+
+interface FormModalProps extends DetailModalProps {
+    title: string
+}
+
+interface DetailModalProps {
+    subData: SubData
+    remove: () => void
+    onSave?: (subData: SubData) => Promise<SubData>
+    onDelete?: (uuid: string) => Promise<SubData>
 }
 
 function SettingsModal({ remove, config, save }: { remove: () => void, config: SubConfig, save: (config: SubConfig) => Promise<SubConfig> }) {
@@ -23,7 +35,7 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
     const isChanges = useMemo(() => {
         return JSON.stringify(newConfig) !== JSON.stringify(config)
     }, [config, newConfig])
-    const handelSave = () => {
+    const handleSave = () => {
         setSaveLoading(true)
         save(newConfig).then(() => {
             remove()
@@ -31,7 +43,8 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
             setSaveLoading(false)
         })
     }
-    return <AppCard title="订阅设置">
+
+    return <AppWindow title="订阅设置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
         <div className="p-3 min-w-80">
             <Typography component={"div"} sx={{ fontSize: "0.9rem" }}>
                 开启时才能使用订阅功能
@@ -41,27 +54,61 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
                 label="开关"
             />
             <div className="flex gap-3 justify-end">
-                <Button disabled={!isChanges} loading={saveLoading} color="success" variant="contained" onClick={handelSave}>保存</Button>
-                <Button disabled={saveLoading} variant="contained" onClick={() => remove()}>取消</Button>
+                <Button disabled={!isChanges} loading={saveLoading} color="success" variant="contained" onClick={handleSave}>保存</Button>
             </div>
         </div>
-    </AppCard >
+    </AppWindow >
+}
+function RecordsModal({ remove, uuid, api }: { remove: () => void, uuid: string, api: ReturnType<typeof SubApi> }) {
+    const recordsData = useQuery({
+        queryKey: [uuid],
+        queryFn: () => api.getRecords(uuid)
+    })
+    console.log(recordsData.data)
+    return <AppWindow title="记录" closeWindow={{ onClose: () => remove() }}>
+        <div className="p-3 min-w-80 flex flex-col items-end">
+            <div className="w-full">
+                {recordsData.isLoading ?
+                    <IconText Icon={HourglassIcon} text="正在加载" /> :
+                    recordsData.isError ? <IconText Icon={HourglassIcon} text="加载失败" /> :
+                        <>记录</>
+                }
+            </div>
+        </div>
+    </AppWindow>
 }
 
-function DetailModal({ remove, subData, onSave }: { remove: () => void, subData: SubData, onSave: (subData: SubData) => Promise<SubData> }) {
+function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProps & {
+    api: ReturnType<typeof SubApi>
+}) {
     const modal = useModal()
     const [newSubData, setNewSubData] = useState(subData)
-    const openEditModal = (subData: SubData, onSave: (subData: SubData) => Promise<SubData>) => {
-        modal.open(({ remove }) => <FormModal remove={remove} title="编辑订阅" subData={subData} onSave={onSave} />, { onMaskClick: () => { } })
+    const handleSave = async (subData: SubData) => {
+        if (onSave) {
+            const result = await onSave(subData)
+            setNewSubData(result)
+            return Promise.resolve(result)
+        }
+        return Promise.reject()
+    }
+    const handleDelete = async (uuid: string) => {
+        if (onDelete) {
+            const result = await onDelete(uuid)
+            remove()
+            return Promise.resolve(result)
+        }
+        return Promise.reject()
     }
 
-    const handelSave = async (subData: SubData) => {
-        const result = await onSave(subData)
-        setNewSubData(result)
-        return Promise.resolve(result)
+    const openEditModal = () => {
+        modal.open(({ remove }) => <FormModal remove={remove} title="编辑订阅" subData={newSubData} onSave={(subData) => handleSave(subData)} onDelete={(uuid) => handleDelete(uuid)} />, { onMaskClick: () => { } })
+    }
+    const openRecordsModal = () => {
+        modal.open(({ remove }) => <RecordsModal remove={remove} uuid={newSubData.uuid} api={api} />)
     }
 
-    return <AppCard title={newSubData.subscription.name ?? "订阅"}>
+
+    return <AppWindow title={newSubData.subscription.name ?? "订阅"} closeWindow={{ onClose: () => remove() }}>
         <div className="flex flex-col gap-3 p-3">
             <div className="flex-1 grid grid-cols-[auto_auto_1fr] gap-x-3">
                 <div>UUID</div>
@@ -82,93 +129,141 @@ function DetailModal({ remove, subData, onSave }: { remove: () => void, subData:
 
                 <div className="text-nowrap">使用期限</div>
                 <div>:</div>
-                {newSubData.subscription.expireAt ?? "无限制"}
+                {newSubData.subscription.expireAt ? new Date(newSubData.subscription.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "无限制"}
             </div>
             <div className="flex justify-end gap-3">
-                <Button color="success" variant="contained" onClick={() => openEditModal(newSubData, handelSave)}>编辑</Button>
-                <Button variant="contained" onClick={() => remove()}>关闭</Button>
+                {
+                    onSave && <Button color="success" variant="contained" onClick={() => openEditModal()}>编辑</Button>
+                }
+                <Button color="primary" variant="contained" onClick={() => openRecordsModal()}>记录</Button>
             </div>
         </div>
-    </AppCard>
+    </AppWindow>
 }
-function FormModal({ remove, title, subData, onSave }: { remove: () => void, title: string, subData: SubData, onSave: (subData: SubData) => Promise<SubData> }) {
+
+function nameValidation(value: string) {
+    if (value.trim()) {
+        return false
+    } else {
+        return true
+    }
+}
+function usageLimitValidation(value: string) {
+    const v = value.trim()
+    return !(v.length === 0 || /^[1-9]\d*$/.test(v))
+}
+function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps) {
     const [newSubData, setNewSubData] = useState(subData)
     const [loading, setLoading] = useState(false)
-    const handelSave = async () => {
-        setLoading(true)
-        await onSave(newSubData).then(() => {
-            remove()
-        }).finally(() => {
-            setLoading(false)
-        })
+    const handleSave = async () => {
+        if (onSave) {
+            if (!newSubData.subscription.name?.trim()) {
+                return
+            }
+            setLoading(true)
+            await onSave(newSubData).then(() => {
+                if (remove) {
+                    remove()
+                }
+            }).finally(() => {
+                setLoading(false)
+            })
+        }
     }
-    return <AppCard title={title} className="min-w-80">
-        <div className="flex flex-col gap-3 p-3">
-            <FormControlLabel
-                control={<Switch disabled={loading} checked={newSubData.subscription.enabled} onChange={(event) => {
+    const handleDelete = async () => {
+        if (onDelete) {
+            if (!newSubData.subscription.name?.trim()) {
+                return
+            }
+            setLoading(true)
+            await onDelete(newSubData.uuid).then(() => {
+                if (remove) {
+                    remove()
+                }
+            }).finally(() => {
+                setLoading(false)
+            })
+        }
+    }
+    const isChanges = useMemo(() => {
+        return JSON.stringify(newSubData) !== JSON.stringify(subData)
+    }, [newSubData, subData])
+    return <AppWindow title={title} closeWindow={{ onClose: () => remove(), disabled: loading }}>
+        <Box component="form" className="flex flex-col gap-3 p-3" onSubmit={handleSave}>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-3">
+                <div>启用</div>
+                <Switch disabled={loading} checked={newSubData.subscription.enabled} onChange={(event) => {
                     setNewSubData((prev => {
                         return {
                             ...prev,
                             subscription: { ...prev.subscription, enabled: event.target.checked }
                         }
                     }))
-                }} />}
-                label="启用此订阅"
-            />
-            <TextField disabled={loading} label="名称" value={newSubData.subscription.name} onChange={(event) => {
-                setNewSubData((prev => {
-                    return {
-                        ...prev,
-                        subscription: { ...prev.subscription, name: event.target.value }
-                    }
-                }))
-            }} error={!newSubData.subscription.name?.trim()}
-                helperText={
-                    !newSubData.subscription.name?.trim() ? "名称不能为空" : ""
-                } />
-            <TextField disabled={loading} label="使用次数限制 空=无限制" type="number"
-                value={newSubData.subscription.usageLimit ?? ""}
+                }} />
+                <div>名称</div>
+                <TextField
+                    size="small"
+                    required
+                    disabled={loading}
+                    value={newSubData.subscription.name}
+                    onChange={(event) => {
+                        setNewSubData((prev => ({
+                            ...prev,
+                            subscription: { ...prev.subscription, name: event.target.value }
+                        })))
+                    }}
+                    error={nameValidation(newSubData.subscription.name)}
 
-                onChange={(event) => {
-                    const value = event.target.value
-
-                    // 允许空
-                    if (value === "") {
+                    helperText={
+                        nameValidation(newSubData.subscription.name) ? "名称不能为空" : null
+                    } />
+                <div>次数</div>
+                <TextField
+                    size="small"
+                    disabled={loading}
+                    type="text"
+                    placeholder="无限制 请留空"
+                    value={newSubData.subscription.usageLimit ?? ""}
+                    onChange={(event) => {
+                        const value = event.target.value
+                        if (usageLimitValidation(value)) return
                         setNewSubData(prev => ({
                             ...prev,
-                            subscription: { ...prev.subscription, usageLimit: null }
+                            subscription: {
+                                ...prev.subscription,
+                                usageLimit: value === "" ? null : Number(value)
+                            }
                         }))
-                        return
-                    }
-
-                    // ❌ 拒绝小数
-                    if (!/^\d+$/.test(value)) return
-
-                    setNewSubData(prev => ({
-                        ...prev,
-                        subscription: {
-                            ...prev.subscription,
-                            usageLimit: Number(value)
-                        }
-                    }))
-                }}
-
-                slotProps={{
-                    input: {
-                        inputProps: {
-                            step: 1,
-                            min: 1,
-                        },
-                    },
-                }} />
-
-            <div className="flex justify-end gap-3">
-                <Button loading={loading} color="success" variant="contained" onClick={() => handelSave()}>保存</Button>
-                <Button disabled={loading} variant="contained" onClick={() => remove()}>关闭</Button>
+                    }}
+                />
+                <div>有效期</div>
+                <TextField
+                    size="small"
+                    disabled={loading}
+                    type="datetime-local"
+                    value={newSubData.subscription.expireAt ? new Date(newSubData.subscription.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""}
+                    onChange={(event) => {
+                        const value = event.target.value
+                        setNewSubData(prev => ({
+                            ...prev,
+                            subscription: {
+                                ...prev.subscription,
+                                expireAt: value ? new Date(value).getTime() : null
+                            }
+                        }))
+                    }}
+                />
             </div>
-        </div>
-
-    </AppCard>
+            <div className="flex justify-end gap-3">
+                {
+                    onDelete && <Button loading={loading} color="error" variant="contained" onClick={() => handleDelete()}>删除</Button>
+                }
+                {
+                    onSave && <Button disabled={!isChanges} type="submit" loading={loading} color="primary" variant="contained" onClick={() => handleSave()}>保存</Button>
+                }
+            </div>
+        </Box>
+    </AppWindow>
 }
 export function SubPanel({ pluginId }: { pluginId: string }) {
     const modal = useModal()
@@ -206,15 +301,15 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
         }
     })
 
-    const removeSubscription = useMutation({
-        mutationFn: (uuid: string) => subApi.removeSub(uuid),
+    const deleteSubscription = useMutation({
+        mutationFn: (uuid: string) => subApi.deleteSub(uuid),
         onSuccess: () => {
             dataQuery.refetch()
         }
     })
 
     const ActionButtons = () => {
-        return configQuery.isLoading ? <div>正在加载</div> : configQuery.isError ? <div>加载失败</div> : <LoadingIconButtion onClick={openSettingsModal} Icon={SettingsIcon} tip="设置" />
+        return configQuery.isLoading ? <div>正在加载</div> : configQuery.isError ? <div>加载失败</div> : <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
     }
     const [searchValus, setSearchValus] = useState("")
     const filterData = useMemo(() => {
@@ -235,10 +330,22 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
     }
 
     const openDetailModal = (subData: SubData) => {
-        modal.open(({ remove }) => <DetailModal remove={remove} subData={subData} onSave={(subData) => updateSubscription.mutateAsync({ subData })} />)
+        modal.open(({ remove }) => <DetailModal remove={remove} subData={subData} onSave={(subData) => updateSubscription.mutateAsync({ subData })} onDelete={(uuid) => deleteSubscription.mutateAsync(uuid)} api={subApi} />)
     }
-
-    return <AppCard title="订阅" actionCompose={<ActionButtons />}>
+    const openAddModal = () => {
+        modal.open(({ remove }) =>
+            <FormModal
+                title={"新增订阅"}
+                subData={{
+                    uuid: "", subscription: {
+                        enabled: false,
+                        name: "",
+                        expireAt: null,
+                        usageLimit: null
+                    }
+                }} remove={remove} onSave={(subData) => addSubscription.mutateAsync(subData.subscription)} />, { onMaskClick: () => { } })
+    }
+    return <AcitonCard className="w-full" acitonBarProps={{ title: "订阅", action: <ActionButtons /> }}>
         {configQuery.isLoading ?
             <IconText Icon={HourglassIcon} text="正在加载配置" color="primary" /> :
             configQuery.isError ?
@@ -251,7 +358,7 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                             <IconText Icon={HourglassIcon} text="订阅加载失败" color="primary" /> : <div>
                                 <div className="flex p-3 gap-3 items-center">
                                     <TextField size="small" className="flex-1" value={searchValus} onChange={(e) => setSearchValus(e.target.value)} label="过滤: id,名称,on,off" />
-                                    <Button variant="contained">新增订阅</Button>
+                                    <Button variant="contained" onClick={() => openAddModal()}>新增订阅</Button>
                                 </div>
                                 {
                                     filterData.length === 0 ? <EmptyState tip="没有数据" /> :
@@ -309,78 +416,5 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                 }
                             </div>
         }
-
-    </AppCard>
-    /* return <Box className="min-w-80" sx={{ borderBlockColor: "divider", borderRadius: borderRadius, boxShadow: theme.shadows[1] }}>
-         <AppTitleBar title="订阅" boxSx={{
-             borderTopRightRadius: borderRadius,
-             borderTopLeftRadius: borderRadius,
-         }} actionCompose={<Box className="flex items-center gap-1">
-             {subEnabled && <LoadingIconButtion onClick={handleOpenAdd} Icon={AddIcon} color={theme.palette.primary.contrastText} tip="新增订阅" />}
-             <Switch
-                 checked={subEnabled}
-                 onChange={(event) => void handleToggleEnabled(event.target.checked)}
-                 disabled={subConfigLoading || configMutation.isLoading}
-                 sx={{
-                     color: theme.palette.primary.contrastText,
-                     '& .MuiSwitch-track': {
-                         backgroundColor: subEnabled ? theme.palette.primary.contrastText : theme.palette.error.main,
-                     },
-                     '& .Mui-checked': {
-                         color: theme.palette.common.white,
-                     },
-                     '& .Mui-checked + .MuiSwitch-track': {
-                         backgroundColor: theme.palette.common.white,
-                     }
-                 }}
-             />
-         </Box>} />
-         { <Box className="p-3 flex flex-col gap-3">
-             {loading ? <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> : !subEnabled ? <IconText Icon={DefaultIcon} text="订阅功能已关闭" color="primary" /> : subItems.length === 0 ? <EmptyState tip="没有订阅" /> : subItems.map(({ uuid, subscription }) => (
-                 <Box key={uuid} className="p-3 rounded-lg border" sx={{ borderColor: "divider" }}>
-                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 2, alignItems: 'center' }}>
-                         <Box>
-                             <Typography sx={{ fontWeight: 600 }}>名称: {subscription.name ?? "未命名订阅"}</Typography>
-                             <Typography color="text.secondary" >uuid: {uuid}</Typography>
-                             <Typography >过期时间: {subscription.expireAt ? new Date(subscription.expireAt).toLocaleString() : "永不过期"}</Typography>
-                             <Typography>使用上限: {subscription.usageLimit !== null ? subscription.usageLimit : "无限制"}</Typography>
-                             <Box className="mt-2">
-                                 <Typography variant="body2" color="text.secondary">订阅链接</Typography>
-                                 <Box className="flex flex-wrap items-center gap-2">
-                                     <Typography component="a" href={getUseSubApiUrl(pluginId, uuid)} target="_blank" rel="noreferrer" color="primary" sx={{ textDecoration: 'underline', wordBreak: 'break-all' }}>
-                                         {getUseSubApiUrl(pluginId, uuid)}
-                                     </Typography>
-                                     <Button size="small" variant="outlined" onClick={async () => {
-                                         await navigator.clipboard.writeText(getUseSubApiUrl(pluginId, uuid))
-                                     }}>
-                                         复制
-                                     </Button>
-                                 </Box>
-                             </Box>
-                         </Box>
-                         <Box className="flex flex-col gap-2 justify-start">
-                             <Button size="small" variant="outlined" onClick={() => getRecords.mutateAsync(uuid)} disabled={!subEnabled || getRecords.isLoading}>记录</Button>
-                             <Button size="small" variant="outlined" onClick={() => handleOpenEdit(uuid, subscription)} disabled={!subEnabled}>编辑</Button>
-                         </Box>
-                     </Box>
-                 </Box>
-             ))}
-         </Box>
-         <SubManageDialog
-             open={manageOpen}
-             form={subForm}
-             onFormChange={setSubForm}
-             title={editUuid ? "编辑订阅" : "新增订阅"}
-             saveCancelDeleteProps={{
-                 onSave: handleSaveSubscription,
-                 onCancel: () => setManageOpen(false),
-                 onDelete: editUuid ? handleRemoveSubscription : undefined
-             }}
-         />
-         <SubRecordsDialog
-             open={recordsOpen}
-             onClose={() => setRecordsOpen(false)}
-             records={records}
-         />
-     </Box> }*/
+    </AcitonCard>
 }

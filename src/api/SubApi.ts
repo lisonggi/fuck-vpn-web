@@ -2,6 +2,7 @@ import { AppApi, type Result } from "./Api"
 
 export interface SubConfig {
     enabled: boolean
+    sort: string | null
 }
 
 export interface Subscription {
@@ -9,6 +10,7 @@ export interface Subscription {
     enabled: boolean
     expireAt: number | null
     usageLimit: number | null
+    sort: string | null
 }
 
 export interface SubData {

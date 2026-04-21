@@ -19,53 +19,109 @@ export class ApiError extends Error {
 export interface ApiRequestOptions extends RequestInit {
     silent?: boolean
 }
+function mapHttpStatusToCN(status: number): string {
+    switch (status) {
+        case 400:
+            return '请求参数错误';
+        case 401:
+            return '未登录或登录已过期';
+        case 403:
+            return '没有权限访问';
+        case 404:
+            return '接口不存在';
+        case 408:
+            return '请求超时';
+        case 429:
+            return '请求过于频繁';
+        case 500:
+            return '服务器内部错误';
+        case 502:
+            return '网关错误';
+        case 503:
+            return '服务不可用';
+        case 504:
+            return '网关超时';
+        default:
+            return `请求失败 (${status})`;
+    }
+}
 
+function mapFetchError(e: unknown): ApiError {
+    if (e instanceof TypeError) {
+        const msg = e.message.toLowerCase();
+
+        if (msg.includes('failed to fetch') || msg.includes('Bad Gateway')) {
+            return new ApiError(0, { message: '无法连接服务器' });
+        }
+
+        if (msg.includes('networkerror')) {
+            return new ApiError(0, { message: '网络错误，请检查网络连接' });
+        }
+
+        if (msg.includes('abort')) {
+            return new ApiError(0, { message: '请求已取消' });
+        }
+
+        return new ApiError(0, { message: '网络异常' });
+    }
+
+    if (e instanceof Error) {
+        return new ApiError(0, { message: e.message });
+    }
+
+    return new ApiError(0, { message: '未知错误' });
+}
 function createFetch(baseUrl: string) {
-    return async function request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
+    return async function request<T>(
+        endpoint: string,
+        options: ApiRequestOptions = {}
+    ): Promise<T> {
         const { silent = false, ...fetchOptions } = options;
         const url = `${baseUrl}${endpoint}`;
+
         try {
             const response = await fetch(url, {
-                method: fetchOptions.method || 'GET',
+                method: fetchOptions.method ?? 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(fetchOptions.headers || {})
+                    ...(fetchOptions.headers ?? {})
                 },
                 body: fetchOptions.body
             });
 
             if (!response.ok) {
-                const result = await response.json().catch(() => ({ message: response.statusText || '请求失败' })) as Result<string>;
-                const error = new ApiError(response.status, {
-                    message: result.message || response.statusText || '请求失败',
-                    body: result.body
-                });
+                let result: Result<string> | null = null;
 
-                throw error;
+                try {
+                    result = await response.json();
+                } catch {
+                    // 非 JSON 响应
+                }
+
+                throw new ApiError(response.status, {
+                    message:
+                        result?.message ||
+                        mapHttpStatusToCN(response.status),
+                    body: result?.body
+                });
             }
 
             return await response.json();
         } catch (e) {
-            let error: ApiError;
-            if (e instanceof ApiError) {
-                error = e;
-            } else if (e instanceof TypeError) {
-                error = new ApiError(500, { message: e.message || '网络异常，请检查连接。' });
-            } else {
-                const message = e instanceof Error ? e.message : '未知错误';
-                error = new ApiError(500, { message });
-            }
+            const error =
+                e instanceof ApiError ? e : mapFetchError(e);
 
             if (!silent) {
-                let displayMessage = error.result.message;
+                let msg = error.result.message;
                 if (error.result.body) {
-                    displayMessage += `-${error.result.body}`;
+                    msg += ` - ${error.result.body}`;
                 }
-                enqueueSnackbar(displayMessage, { variant: "error" });
+                enqueueSnackbar(msg, { variant: 'error' });
             }
+
             throw error;
         }
-    }
-};
+    };
+}
 
 export const AppApi = createFetch("/api")

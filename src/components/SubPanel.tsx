@@ -43,9 +43,9 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
             setSaveLoading(false)
         })
     }
-
+    console.log(newConfig.sort)
     return <AppWindow title="订阅设置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
-        <div className="p-3 min-w-80">
+        <div className="p-3 min-w-80 flex flex-col gap-3">
             <Typography component={"div"} sx={{ fontSize: "0.9rem" }}>
                 开启时才能使用订阅功能
             </Typography>
@@ -53,6 +53,19 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
                 control={<Switch disabled={saveLoading} checked={newConfig.enabled} onChange={(event) => setNewConfig({ ...newConfig, enabled: event.target.checked })} />}
                 label="开关"
             />
+            <TextField
+                size="small"
+                required
+                label="默认排序"
+                disabled={saveLoading}
+                value={newConfig.sort}
+                onChange={(event) => {
+                    setNewConfig((prev => ({
+                        ...prev,
+                        sort: event.target.value.trim() || null
+                    })))
+                }}
+                placeholder="用,分割排序" />
             <div className="flex gap-3 justify-end">
                 <Button disabled={!isChanges} loading={saveLoading} color="success" variant="contained" onClick={handleSave}>保存</Button>
             </div>
@@ -64,17 +77,22 @@ function RecordsModal({ remove, uuid, api }: { remove: () => void, uuid: string,
         queryKey: [uuid],
         queryFn: () => api.getRecords(uuid)
     })
-    console.log(recordsData.data)
     return <AppWindow title="记录" closeWindow={{ onClose: () => remove() }}>
-        <div className="p-3 min-w-80 flex flex-col items-end">
-            <div className="w-full">
-                {recordsData.isLoading ?
-                    <IconText Icon={HourglassIcon} text="正在加载" /> :
-                    recordsData.isError ? <IconText Icon={HourglassIcon} text="加载失败" /> :
-                        <>记录</>
-                }
-            </div>
-        </div>
+        {<div className="p-3 max-h-100 overflow-auto">
+            {recordsData.isLoading ?
+                <IconText Icon={HourglassIcon} text="正在加载" /> :
+                recordsData.isError ? <IconText Icon={HourglassIcon} text="加载失败" /> :
+                    <div className="flex-1 overflow-auto">
+                        {recordsData.data.map((item, index) =>
+                            <div>
+                                {index > 0 && <Divider />}
+                                <div><Typography color="info" sx={{ fontSize: "1.2rem" }}>{item.ip}</Typography></div>
+                                <div><Typography sx={{ fontSize: "0.9rem" }}>{new Date(item.time - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}</Typography></div>
+                            </div>
+                        )}
+                    </div>
+            }
+        </div>}
     </AppWindow>
 }
 
@@ -130,6 +148,9 @@ function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProp
                 <div className="text-nowrap">使用期限</div>
                 <div>:</div>
                 {newSubData.subscription.expireAt ? new Date(newSubData.subscription.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "无限制"}
+                <div className="text-nowrap">排序</div>
+                <div>:</div>
+                {newSubData.subscription.sort ?? "默认排序"}
             </div>
             <div className="flex justify-end gap-3">
                 {
@@ -142,7 +163,7 @@ function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProp
 }
 
 function nameValidation(value: string) {
-    if (value.trim()) {
+    if (value.trim().length === 0) {
         return false
     } else {
         return true
@@ -150,16 +171,13 @@ function nameValidation(value: string) {
 }
 function usageLimitValidation(value: string) {
     const v = value.trim()
-    return !(v.length === 0 || /^[1-9]\d*$/.test(v))
+    return (v.length === 0 || /^[1-9]\d*$/.test(v))
 }
 function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps) {
     const [newSubData, setNewSubData] = useState(subData)
     const [loading, setLoading] = useState(false)
     const handleSave = async () => {
         if (onSave) {
-            if (!newSubData.subscription.name?.trim()) {
-                return
-            }
             setLoading(true)
             await onSave(newSubData).then(() => {
                 if (remove) {
@@ -172,9 +190,6 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
     }
     const handleDelete = async () => {
         if (onDelete) {
-            if (!newSubData.subscription.name?.trim()) {
-                return
-            }
             setLoading(true)
             await onDelete(newSubData.uuid).then(() => {
                 if (remove) {
@@ -212,10 +227,10 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                             subscription: { ...prev.subscription, name: event.target.value }
                         })))
                     }}
-                    error={nameValidation(newSubData.subscription.name)}
+                    error={!nameValidation(newSubData.subscription.name)}
 
                     helperText={
-                        nameValidation(newSubData.subscription.name) ? "名称不能为空" : null
+                        !nameValidation(newSubData.subscription.name) ? "名称不能为空" : null
                     } />
                 <div>次数</div>
                 <TextField
@@ -226,7 +241,7 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                     value={newSubData.subscription.usageLimit ?? ""}
                     onChange={(event) => {
                         const value = event.target.value
-                        if (usageLimitValidation(value)) return
+                        if (!usageLimitValidation(value)) return
                         setNewSubData(prev => ({
                             ...prev,
                             subscription: {
@@ -253,13 +268,30 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                         }))
                     }}
                 />
+                <div>排序</div>
+                <TextField
+                    size="small"
+                    required
+                    disabled={loading}
+                    value={newSubData.subscription.sort}
+                    onChange={(event) => {
+                        setNewSubData((prev => ({
+                            ...prev,
+                            subscription: {
+                                ...prev.subscription,
+                                sort: event.target.value.trim() || null
+                            }
+                        })))
+                    }}
+                    placeholder="用,分割排序"
+                />
             </div>
             <div className="flex justify-end gap-3">
                 {
                     onDelete && <Button loading={loading} color="error" variant="contained" onClick={() => handleDelete()}>删除</Button>
                 }
                 {
-                    onSave && <Button disabled={!isChanges} type="submit" loading={loading} color="primary" variant="contained" onClick={() => handleSave()}>保存</Button>
+                    onSave && <Button disabled={!isChanges || !nameValidation(newSubData.subscription.name) || newSubData.subscription.usageLimit != null && !usageLimitValidation(String(newSubData.subscription.usageLimit))} type="submit" loading={loading} color="primary" variant="contained" onClick={() => handleSave()}>保存</Button>
                 }
             </div>
         </Box>
@@ -341,10 +373,12 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                         enabled: false,
                         name: "",
                         expireAt: null,
-                        usageLimit: null
+                        usageLimit: null,
+                        sort: null
                     }
                 }} remove={remove} onSave={(subData) => addSubscription.mutateAsync(subData.subscription)} />, { onMaskClick: () => { } })
     }
+
     return <AcitonCard className="w-full" acitonBarProps={{ title: "订阅", action: <ActionButtons /> }}>
         {configQuery.isLoading ?
             <IconText Icon={HourglassIcon} text="正在加载配置" color="primary" /> :
@@ -365,6 +399,15 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                         <div>
                                             {
                                                 filterData.map(([uuid, subscription], index) => {
+                                                    const sort =
+                                                        subscription.sort?.trim()
+
+                                                    const query = new URLSearchParams()
+
+                                                    if (sort) {
+                                                        query.set("sort", sort)
+                                                    }
+
                                                     return <div key={uuid} className="hover:bg-gray-100">
                                                         {index > 0 && <Divider />}
                                                         <div className="flex flex-row p-3 items-center" >
@@ -383,7 +426,7 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                                                     <div className="text-nowrap">订阅</div>
                                                                     <div>:</div>
                                                                     <Typography onClick={e => e.stopPropagation()} component="a" href={getUseSubApiUrl(pluginId, uuid)} target="_blank" rel="noreferrer" color="primary" sx={{ textDecoration: 'underline', wordBreak: 'break-all' }}>
-                                                                        <p>{`api/${pluginId}/useSub/${uuid}`}</p>
+                                                                        <p>{`api/${pluginId}/useSub/${uuid}${query.toString() ? `?${query}` : ""}`}</p>
                                                                     </Typography>
                                                                     <div>
                                                                         <Tooltip title="复制订阅">

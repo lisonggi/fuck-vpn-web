@@ -1,11 +1,11 @@
-import { Alert, Box, Button, TextField, Typography, useTheme } from "@mui/material";
+import { Alert, Box, Button, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "../api/Api";
 import { AuthApi } from "../api/AuthApi";
+import { AppCard } from "../components/AppCard";
 
 export function SecurityPage() {
-    const theme = useTheme();
     const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -48,43 +48,43 @@ export function SecurityPage() {
         }
     };
 
-    const borderRadius = (Number(theme.shape.borderRadius) * 2) + "px";
-
     return (
         <div className="w-full h-full flex justify-center items-center py-8">
-            <Box className="min-w-80 sm:min-w-100 flex flex-col gap-3 p-5" sx={{ borderBlockColor: "divider", borderRadius: borderRadius, boxShadow: theme.shadows[1] }}>
-                <Typography color="primary" sx={{ textAlign: "center", fontSize: "1.5rem" }}>
-                    修改用户名与密码
-                </Typography>
-                <Box component="form" onSubmit={handleSubmit} className="flex flex-col gap-3">
-                    {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
-                    {successMessage && <Alert severity="success">{successMessage}</Alert>}
-                    <TextField
-                        label="新用户名"
-                        variant="outlined"
-                        size="small"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                        fullWidth
-                        required
-                        helperText="请输入新用户名或保留当前用户名。"
-                    />
-                    <TextField
-                        label="新密码"
-                        type="password"
-                        size="small"
-                        variant="outlined"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        fullWidth
-                        required
-                        helperText="请输入新密码。"
-                    />
-                    <Button type="submit" variant="contained" size="large" disabled={loading} fullWidth>
-                        {loading ? "保存中..." : "保存"}
-                    </Button>
-                </Box>
-            </Box>
+            <AppCard className="min-w-80 sm:min-w-100 p-5">
+                <div className="flex flex-col gap-3">
+                    <Typography color="primary" sx={{ textAlign: "center", fontSize: "1.5rem" }}>
+                        修改用户名与密码
+                    </Typography>
+                    <Box component="form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+                        {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+                        {successMessage && <Alert severity="success">{successMessage}</Alert>}
+                        <TextField
+                            label="新用户名"
+                            variant="outlined"
+                            size="small"
+                            value={username}
+                            onChange={(event) => setUsername(event.target.value)}
+                            fullWidth
+                            required
+                            helperText="请输入新用户名或保留当前用户名。"
+                        />
+                        <TextField
+                            label="新密码"
+                            type="password"
+                            size="small"
+                            variant="outlined"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            fullWidth
+                            required
+                            helperText="请输入新密码。"
+                        />
+                        <Button type="submit" variant="contained" size="large" disabled={loading} fullWidth>
+                            {loading ? "保存中..." : "保存"}
+                        </Button>
+                    </Box>
+                </div>
+            </AppCard>
         </div>
     );
 }

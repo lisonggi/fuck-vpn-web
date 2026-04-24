@@ -1,7 +1,7 @@
 import { Button, Divider, FormControlLabel, Switch, TextField, Typography } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { KeyApi, type KeyConfig } from "../api/KeyApi";
+import { KeyApi, type KeyUpdateConfigRequest } from "../api/KeyApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
 import { AcitonCard } from "./AcitonCard";
@@ -12,8 +12,8 @@ import { IconText } from "./IconText";
 import { LoadingIconButtion } from "./LoadingIconButtion";
 
 
-function SettingsModal({ config, remove, onSave }: { config: KeyConfig, remove: () => void, onSave: (config: KeyConfig) => Promise<void> }) {
-    const [newConfig, setNewConfig] = useState<KeyConfig>(config)
+function SettingsModal({ config, remove, onSave }: { config: KeyUpdateConfigRequest, remove: () => void, onSave: (config: KeyUpdateConfigRequest) => Promise<unknown> }) {
+    const [newConfig, setNewConfig] = useState<KeyUpdateConfigRequest>(config)
     const [saveLoading, setSaveLoading] = useState(false)
     const handelSave = () => {
         setSaveLoading(true)
@@ -66,7 +66,7 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
     const stateQuery = useQuery({
         queryKey: ["keyState", pluginId],
-        queryFn: () => keyApi.getKeyState(),
+        queryFn: () => keyApi.getKeyConfig(),
         refetchInterval: (data) => ((data?.checking ? 2000 : false)),
         onSuccess: (data) => {
             if (prevGeneratingRef.current && !data.checking) {
@@ -83,7 +83,7 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
 
     const updateKeyConfig = useMutation({
-        mutationFn: (config: KeyConfig) => keyApi.updateKeyConfig(config),
+        mutationFn: (config: KeyUpdateConfigRequest) => keyApi.updateKeyConfig(config),
         onSuccess: () => {
             stateQuery.refetch()
         }
@@ -99,7 +99,7 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
     const openSettingsModal = () => {
         if (stateQuery.isSuccess) {
-            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data?.keyConfig} remove={remove} onSave={(config) => updateKeyConfig.mutateAsync(config)} />), {
+            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data?.config} remove={remove} onSave={(config) => updateKeyConfig.mutateAsync(config)} />), {
                 onMaskClick: () => { }
             })
         }

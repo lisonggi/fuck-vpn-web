@@ -68,7 +68,7 @@ export function MenuDrawer({ menuGroup, selectedItem, open, onClose, onItemclick
                     <div className="flex-1">
                         {username}
                     </div>
-                    <LoadingIconButtion sx={{ color: theme.palette.primary.main }} tip="注销登陆" loading={isLoggingOut} icon={LogoutIcon} onClick={handleLogoutClick} />
+                    <LoadingIconButtion sx={{ color: theme.palette.primary.main }} tip="注销登陆" loading={isLoggingOut} icon={LogoutIcon} onClick={()=>handleLogoutClick()} />
                 </Typography>
             </Box>
         </Drawer>

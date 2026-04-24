@@ -3,30 +3,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLoaderData, useMatches, useNavigate } from "react-router";
 import { AuthApi } from "../api/AuthApi";
-import { PluginApi, type PluginInfo, type UpdateStateConfig } from "../api/PluginApi";
+import { PluginApi, type PluginConfigResponse, type PluginUpdateConfigRequest } from "../api/PluginApi";
 import { InfoIcon, MenuIcon, PowerIcon } from "../assets/icons/Icons";
 import { AcitonCard } from "../components/AcitonCard";
 import { type AcitonBarProps } from "../components/ActionBar";
 import { AppWindow } from "../components/AppWindow";
+import { LoadingIconButtion } from "../components/LoadingIconButtion";
 import { MenuDrawer, type MenuDrawerProps, type MenuGroup, type MenuItem } from "../components/MenuDrawer";
 import { PluginNotEnabled } from "../components/PluginNotEnabled";
 import { useModal } from "../hooks/useModal";
 import { adminChildren } from "../router";
 import { LoadingPage } from "./LoadingPage";
-import { LoadingIconButtion } from "../components/LoadingIconButtion";
 
 const PLUGIN_QUERY_KEY = "getAllPlugin"
-function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: PluginInfo }) {
+function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: PluginConfigResponse }) {
     return <AppWindow title="插件信息" closeWindow={{ onClose: () => remove() }}>
         <Typography component="div" className="p-3">
             <div className="grid grid-cols-[auto_auto_1fr] gap-x-3 p-3 border-gray-200 border-dashed border-2 rounded-md  text-nowrap">
                 <div className="text-gray-500">名称</div>
                 <div>:</div>
-                <div>{pluginInfo.info.name}</div>
+                <div>{pluginInfo.pluginInfo.name}</div>
 
                 <div className="text-gray-500">ID</div>
                 <div>:</div>
-                <div>{pluginInfo.info.id}</div>
+                <div>{pluginInfo.pluginInfo.id}</div>
 
                 <div className="text-gray-500">启用状态</div>
                 <div>:</div>
@@ -34,19 +34,19 @@ function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: Plu
 
                 <div className="text-gray-500">插件类型</div>
                 <div>:</div>
-                <div>{pluginInfo?.keyService ? "节点+密钥" : "节点"}</div>
+                <div>{pluginInfo.pluginInfo.serviceType === "KEY" ? "KEY" : "NODE"}</div>
 
                 <div className="text-gray-500">版本</div>
                 <div>:</div>
-                <div>{pluginInfo?.info.version}</div>
+                <div>{pluginInfo.pluginInfo.version}</div>
 
                 <div className="text-gray-500">作者</div>
                 <div>:</div>
-                <div>{pluginInfo?.info.author || "未知"}</div>
+                <div>{pluginInfo.pluginInfo.author || "未知"}</div>
 
                 <div className="text-gray-500">描述</div>
                 <div>:</div>
-                <div>{pluginInfo?.info.description || "无描述"}</div>
+                <div>{pluginInfo.pluginInfo.description || "无描述"}</div>
             </div>
         </Typography>
 
@@ -54,23 +54,23 @@ function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: Plu
 }
 export function AdminPage() {
     const modal = useModal()
-    const { token } = useLoaderData();
+    const { username } = useLoaderData();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const queryClient = useQueryClient();
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: [PLUGIN_QUERY_KEY],
-        queryFn: PluginApi().getAllPlugin
+        queryFn: PluginApi().getAllPluginConfig
     });
     const theme = useTheme()
     const [closePluginButtonLoading, setClosePluginButtonLoading] = useState(false)
     const mutation = useMutation({
-        mutationFn: ({ id, config }: { id: string; config: UpdateStateConfig }) =>
-            PluginApi().updateStateConfig(id, config),
+        mutationFn: ({ id, config }: { id: string; config: PluginUpdateConfigRequest }) =>
+            PluginApi().updatePluginConfig(id, config),
         onSuccess: (result, request) => {
-            queryClient.setQueryData<PluginInfo[]>([PLUGIN_QUERY_KEY], (old) =>
+            queryClient.setQueryData<PluginConfigResponse[]>([PLUGIN_QUERY_KEY], (old) =>
                 old?.map((item) =>
-                    item.info.id === request.id
-                        ? { ...item, enabled: result.body!.enabled }
+                    item.pluginInfo.id === request.id
+                        ? { ...item, enabled: result.enabled }
                         : item
                 )
             );
@@ -87,8 +87,8 @@ export function AdminPage() {
             if (children.id === "plugin") {
                 data?.forEach(plugin => {
                     pluginMenuitems.push({
-                        path: plugin.info.id,
-                        name: plugin.info.name,
+                        path: plugin.pluginInfo.id,
+                        name: plugin.pluginInfo.name,
                         icon: plugin.enabled
                             ? <Icon color="primary" />
                             : <Icon color="disabled" />
@@ -139,7 +139,7 @@ export function AdminPage() {
             setIsMenuOpen(false)
             navigate(item.path)
         },
-        username: token.username,
+        username: username,
         onLogoutClick: async () => {
             await AuthApi().logout()
             navigate("/login")
@@ -150,7 +150,7 @@ export function AdminPage() {
         await mutation.mutateAsync({ id, config: { enabled } })
     }
 
-    const pluginInfo: PluginInfo | undefined = data?.find(item => item.info.id === selectedItem.path)
+    const pluginInfo: PluginConfigResponse | undefined = data?.find(item => item.pluginInfo.id === selectedItem.path)
 
     const handelLoadingIconButtionClick = async () => {
         setClosePluginButtonLoading(true)

@@ -1,11 +1,19 @@
 import { AppApi, type Result } from "./Api"
 
-export interface SubConfig {
+export interface UpdateConfigRequest {
     enabled: boolean
-    sort: string | null
+    sort?: string | null
 }
 
-export interface Subscription {
+export interface AddItemRequest {
+    name: string
+    enabled: boolean
+    expireAt: number | null
+    usageLimit: number | null
+    sort: string | null
+}
+export interface UpdateItemRequest {
+    uuid: string,
     name: string
     enabled: boolean
     expireAt: number | null
@@ -13,61 +21,73 @@ export interface Subscription {
     sort: string | null
 }
 
-export interface SubData {
-    uuid: string
-    subscription: Subscription
+export interface ConfigResponse {
+    enabled: boolean
+    sort?: string
 }
-
-export interface SubRecord {
+export interface ItemResponse {
+    uuid: string,
+    name: string
+    enabled: boolean
+    expireAt: number | null
+    usageLimit: number | null
+    sort: string | null
+}
+export interface Record {
     ip: string
     time: number
+    userAgent: string
+}
+export interface RecordResponse {
+    uuid: string,
+    records: Record[]
 }
 
 export const SubApi = (id: string) => {
     const getSubConfig = async () => {
-        const result = await AppApi<Result<SubConfig>>(`/${id}/getSubConfig`)
-        return result.body as SubConfig
+        const result = await AppApi<Result<ConfigResponse>>(`/${id}/getSubConfig`)
+        return result.body as ConfigResponse
     }
 
-    const updateSubConfig = async (config: SubConfig) => {
-        const result = await AppApi<Result<SubConfig>>(`/${id}/updateSubConfig`, {
+    const updateSubConfig = async (config: UpdateConfigRequest) => {
+        const result = await AppApi<Result<ConfigResponse>>(`/${id}/updateSubConfig`, {
             method: "PUT",
             body: JSON.stringify(config)
         })
-        return result.body as SubConfig
+        return result.body as ConfigResponse
     }
 
     const getAllSub = async () => {
-        const result = await AppApi<Result<Record<string, Subscription>>>(`/${id}/getAllSub`)
-        return result.body as Record<string, Subscription>
+        const result = await AppApi<Result<ItemResponse[]>>(`/${id}/getAllSub`)
+        return result.body as ItemResponse[]
     }
 
-    const addSub = async (subscription: Subscription) => {
-        const result = await AppApi<Result<SubData>>(`/${id}/addSub`, {
+    const addSub = async (subscription: AddItemRequest) => {
+        const result = await AppApi<Result<ItemResponse>>(`/${id}/addSub`, {
             method: "POST",
             body: JSON.stringify(subscription)
         })
-        return result.body as SubData
+        return result.body as ItemResponse
     }
 
-    const getRecords = async (uuid: string) => {
-        const result = await AppApi<Result<SubRecord[]>>(`/${id}/getRecords/${uuid}`)
-        return result.body as SubRecord[]
+    const getSubRecords = async (uuid: string) => {
+        const result = await AppApi<Result<RecordResponse>>(`/${id}/getSubRecords/${uuid}`)
+        return result.body as RecordResponse
     }
 
-    const updateSub = async (subData: SubData) => {
-        const result = await AppApi<Result<SubData>>(`/${id}/updateSub/${subData.uuid}`, {
+    const updateSub = async (subData: UpdateItemRequest) => {
+        const result = await AppApi<Result<ItemResponse>>(`/${id}/updateSub`, {
             method: "PUT",
-            body: JSON.stringify(subData.subscription)
+            body: JSON.stringify(subData)
         })
-        return result.body as SubData
+        return result.body as ItemResponse
     }
 
     const deleteSub = async (uuid: string) => {
-        const result = await AppApi<Result<SubData>>(`/${id}/removeSub/${uuid}`, {
+        const result = await AppApi<Result<ItemResponse>>(`/${id}/deleteSub/${uuid}`, {
             method: "DELETE"
         })
-        return result.body as SubData
+        return result.body as ItemResponse
     }
 
     return {
@@ -75,7 +95,7 @@ export const SubApi = (id: string) => {
         updateSubConfig,
         getAllSub,
         addSub,
-        getRecords,
+        getSubRecords,
         updateSub,
         deleteSub,
     }

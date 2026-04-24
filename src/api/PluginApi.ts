@@ -1,35 +1,36 @@
 import { AppApi, type Result } from "./Api"
 
-export interface UpdateStateConfig {
+export interface PluginUpdateConfigRequest {
     enabled: boolean
 }
 
-export interface PluginStateConfig extends UpdateStateConfig {
-    configUpdating: boolean
+type ServiceType = "NODE" | "KEY"
+export interface PluginInfo {
+    id: string
+    name: string
+    version: string
+    author?: string;
+    description?: string
+    serviceType: ServiceType
 }
-
-export interface PluginInfo extends UpdateStateConfig {
-    keyService: boolean
-    info: {
-        id: string
-        name: string
-        version: string
-        author: string | null;
-        description: string | null
-    }
+export interface PluginConfigResponse {
+    enabled: boolean
+    configUpdating: boolean
+    pluginInfo: PluginInfo
 }
 
 export const PluginApi = () => {
-    const getAllPlugin = async () => {
-        const result: Result<PluginInfo[]> = await AppApi<Result<PluginInfo[]>>("/plugin/getallplugin")
-        return result.body as PluginInfo[]
+    const getAllPluginConfig = async () => {
+        const result: Result<PluginConfigResponse[]> = await AppApi<Result<PluginConfigResponse[]>>("/plugin")
+        return result.body as PluginConfigResponse[]
     }
-    const updateStateConfig = async (id: string, config: UpdateStateConfig) => {
-        return await AppApi<Result<PluginStateConfig>>(`/${id}/updateStateConfig`, {
+    const updatePluginConfig = async (id: string, config: PluginUpdateConfigRequest) => {
+        const result: Result<PluginConfigResponse> = await AppApi<Result<PluginConfigResponse>>(`/plugin/${id}`, {
             method: 'PUT',
             body: JSON.stringify(config)
-        });
+        })
+        return result.body as PluginConfigResponse
     };
 
-    return { getAllPlugin, updateStateConfig }
+    return { getAllPluginConfig, updatePluginConfig }
 }

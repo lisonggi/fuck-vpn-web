@@ -1,7 +1,7 @@
 import { Button, Divider, FormControlLabel, Switch, TextField, Typography } from "@mui/material";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { NodeApi, type NodeTaskConfig } from "../api/NodeApi";
+import { NodeApi, type NodeConfigResponse, type NodeUpdateConfigRequest } from "../api/NodeApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
 import { AcitonCard } from "./AcitonCard";
@@ -11,8 +11,8 @@ import { EmptyState } from "./EmptyState";
 import { IconText } from "./IconText";
 import { LoadingIconButtion } from "./LoadingIconButtion";
 
-function SettingsModal({ config, remove, onSave }: { config: NodeTaskConfig, remove: () => void, onSave: (config: NodeTaskConfig) => Promise<void> }) {
-    const [newConfig, setNewConfig] = useState<NodeTaskConfig>(config)
+function SettingsModal({ config, remove, onSave }: { config: NodeUpdateConfigRequest, remove: () => void, onSave: (config: NodeUpdateConfigRequest) => Promise<NodeConfigResponse> }) {
+    const [newConfig, setNewConfig] = useState<NodeUpdateConfigRequest>(config)
     const [saveLoading, setSaveLoading] = useState(false)
     const handelSave = () => {
         setSaveLoading(true)
@@ -65,7 +65,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
 
     const stateQuery = useQuery({
         queryKey: ["nodeState", pluginId],
-        queryFn: () => nodeApi.getNodeState(),
+        queryFn: () => nodeApi.getNodeConfig(),
         refetchInterval: (data) => ((data?.generating ? 2000 : false)),
         onSuccess: (data) => {
             if (prevGeneratingRef.current && !data.generating) {
@@ -81,7 +81,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
     })
 
     const updateNodeConfig = useMutation({
-        mutationFn: (config: NodeTaskConfig) => nodeApi.updateNodeConfig(config),
+        mutationFn: (config: NodeUpdateConfigRequest) => nodeApi.updateNodeConfig(config),
         onSuccess: () => {
             stateQuery.refetch()
         }
@@ -96,7 +96,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
 
     const openSettingsModal = () => {
         if (stateQuery.isSuccess) {
-            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data.nodeTaskConfig} remove={remove} onSave={(config) => updateNodeConfig.mutateAsync(config)} />), {
+            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data.config} remove={remove} onSave={(config) => updateNodeConfig.mutateAsync(config)} />), {
                 onMaskClick: () => { }
             })
         }
@@ -106,7 +106,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
         <AcitonCard className="w-full" acitonBarProps={{
             title: "节点", action: stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
                 <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
-                <LoadingIconButtion onClick={() => refreshNodes.mutateAsync()} loading={stateQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
+                <LoadingIconButtion onClick={  ()=>refreshNodes.mutateAsync()} loading={stateQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
             </>
         }}>
             {dataQuery.isLoading ? <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> : dataQuery.isError ? <IconText Icon={HourglassIcon} text="加载失败" color="primary" /> : dataQuery.data.length === 0 ? <EmptyState tip="没有数据" /> : <div>{dataQuery.data.map((value, index) => {

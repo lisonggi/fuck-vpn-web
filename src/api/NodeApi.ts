@@ -1,35 +1,40 @@
 import { AppApi, type Result } from "./Api"
 
 
-export interface NodeState {
+export interface NodeConfigResponse {
     configUpdating: boolean,
     generating: boolean,
     nextTime?: number,
-    nodeTaskConfig: NodeTaskConfig
+    config: {
+        autoRefresh: boolean,
+        delayMilliseconds: number
+    }
 }
 
-export interface NodeTaskConfig {
-    autoRefresh: boolean,
-    delayMilliseconds: number
+export interface NodeUpdateConfigRequest {
+    autoRefresh?: boolean,
+    delayMilliseconds?: number
 }
 
 export const NodeApi = (id: string) => {
-    const getNodeState = async () => {
-        const result = await AppApi<Result<NodeState>>(`/${id}/getNodeState`)
-        return result.body as NodeState
+    const getNodeConfig = async () => {
+        const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/getNodeConfig`)
+        return result.body as NodeConfigResponse
     }
     const getNodes = async () => {
         const result = await AppApi<Result<string[]>>(`/${id}/getNodes`)
         return result.body as string[]
     }
     const refreshNodes = async () => {
-        await AppApi<Result<undefined>>(`/${id}/refreshNodes`, { method: "POST" })
+        const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/refreshNodes`, { method: "POST" })
+        return result.body as NodeConfigResponse
     }
-    const updateNodeConfig = async (config: NodeTaskConfig) => {
-        await AppApi<Result<undefined>>(`/${id}/updateNodeConfig`, {
+    const updateNodeConfig = async (config: NodeUpdateConfigRequest) => {
+        const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/updateNodeConfig`, {
             method: "PUT",
             body: JSON.stringify(config)
         })
+        return result.body as NodeConfigResponse
     }
-    return { getNodeState, getNodes, refreshNodes, updateNodeConfig }
+    return { getNodeConfig, getNodes, refreshNodes, updateNodeConfig }
 }

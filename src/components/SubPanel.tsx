@@ -2,7 +2,7 @@ import { Box, Button, Divider, FormControlLabel, IconButton, Switch, TextField, 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { enqueueSnackbar } from "notistack"
 import { useMemo, useState } from "react"
-import { SubApi, type SubConfig, type SubData, type Subscription } from "../api/SubApi"
+import { SubApi, type AddItemRequest, type ItemResponse, type UpdateConfigRequest, type UpdateItemRequest } from "../api/SubApi"
 
 import { CopyIcon, DocsIcon, HourglassIcon, PowerIcon, SettingsIcon } from "../assets/icons/Icons"
 
@@ -23,14 +23,14 @@ interface FormModalProps extends DetailModalProps {
 }
 
 interface DetailModalProps {
-    subData: SubData
+    item: ItemResponse
     remove: () => void
-    onSave?: (subData: SubData) => Promise<SubData>
-    onDelete?: (uuid: string) => Promise<SubData>
+    onSave?: (subData: UpdateItemRequest) => Promise<ItemResponse>
+    onDelete?: (uuid: string) => Promise<ItemResponse>
 }
 
-function SettingsModal({ remove, config, save }: { remove: () => void, config: SubConfig, save: (config: SubConfig) => Promise<SubConfig> }) {
-    const [newConfig, setNewConfig] = useState<SubConfig>(config)
+function SettingsModal({ remove, config, save }: { remove: () => void, config: UpdateConfigRequest, save: (config: UpdateConfigRequest) => Promise<UpdateConfigRequest> }) {
+    const [newConfig, setNewConfig] = useState<UpdateConfigRequest>(config)
     const [saveLoading, setSaveLoading] = useState(false)
     const isChanges = useMemo(() => {
         return JSON.stringify(newConfig) !== JSON.stringify(config)
@@ -55,10 +55,10 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
             />
             <TextField
                 size="small"
-                required
                 label="默认排序"
+                type="text"
                 disabled={saveLoading}
-                value={newConfig.sort}
+                value={newConfig.sort ?? ""}
                 onChange={(event) => {
                     setNewConfig((prev => ({
                         ...prev,
@@ -75,7 +75,7 @@ function SettingsModal({ remove, config, save }: { remove: () => void, config: S
 function RecordsModal({ remove, uuid, api }: { remove: () => void, uuid: string, api: ReturnType<typeof SubApi> }) {
     const recordsData = useQuery({
         queryKey: [uuid],
-        queryFn: () => api.getRecords(uuid)
+        queryFn: () => api.getSubRecords(uuid)
     })
     return <AppWindow title="记录" closeWindow={{ onClose: () => remove() }}>
         {<div className="p-3 max-h-100 overflow-auto">
@@ -83,11 +83,12 @@ function RecordsModal({ remove, uuid, api }: { remove: () => void, uuid: string,
                 <IconText Icon={HourglassIcon} text="正在加载" /> :
                 recordsData.isError ? <IconText Icon={HourglassIcon} text="加载失败" /> :
                     <div className="flex-1 overflow-auto">
-                        {recordsData.data.map((item, index) =>
+                        {recordsData.data.records.map((item, index) =>
                             <div>
                                 {index > 0 && <Divider />}
                                 <div><Typography color="info" sx={{ fontSize: "1.2rem" }}>{item.ip}</Typography></div>
                                 <div><Typography sx={{ fontSize: "0.9rem" }}>{new Date(item.time - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}</Typography></div>
+                                <div><Typography sx={{ fontSize: "0.9rem" }}>{item.userAgent}</Typography></div>
                             </div>
                         )}
                     </div>
@@ -96,12 +97,12 @@ function RecordsModal({ remove, uuid, api }: { remove: () => void, uuid: string,
     </AppWindow>
 }
 
-function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProps & {
+function DetailModal({ remove, item: subData, onSave, onDelete, api }: DetailModalProps & {
     api: ReturnType<typeof SubApi>
 }) {
     const modal = useModal()
     const [newSubData, setNewSubData] = useState(subData)
-    const handleSave = async (subData: SubData) => {
+    const handleSave = async (subData: UpdateItemRequest) => {
         if (onSave) {
             const result = await onSave(subData)
             setNewSubData(result)
@@ -119,14 +120,14 @@ function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProp
     }
 
     const openEditModal = () => {
-        modal.open(({ remove }) => <FormModal remove={remove} title="编辑订阅" subData={newSubData} onSave={(subData) => handleSave(subData)} onDelete={(uuid) => handleDelete(uuid)} />, { onMaskClick: () => { } })
+        modal.open(({ remove }) => <FormModal remove={remove} title="编辑订阅" item={newSubData} onSave={(subData) => handleSave(subData)} onDelete={(uuid) => handleDelete(uuid)} />, { onMaskClick: () => { } })
     }
     const openRecordsModal = () => {
         modal.open(({ remove }) => <RecordsModal remove={remove} uuid={newSubData.uuid} api={api} />)
     }
 
 
-    return <AppWindow title={newSubData.subscription.name ?? "订阅"} closeWindow={{ onClose: () => remove() }}>
+    return <AppWindow title={newSubData.name ?? "订阅"} closeWindow={{ onClose: () => remove() }}>
         <div className="flex flex-col gap-3 p-3">
             <div className="flex-1 grid grid-cols-[auto_auto_1fr] gap-x-3">
                 <div>UUID</div>
@@ -135,22 +136,22 @@ function DetailModal({ remove, subData, onSave, onDelete, api }: DetailModalProp
 
                 <div className="text-nowrap">名称</div>
                 <div>:</div>
-                {newSubData.subscription.name}
+                {newSubData.name}
 
                 <div className="text-nowrap">状态</div>
                 <div>:</div>
-                {newSubData.subscription.enabled ? "已启用" : "已禁用"}
+                {newSubData.enabled ? "已启用" : "已禁用"}
 
                 <div className="text-nowrap">使用上限</div>
                 <div>:</div>
-                {newSubData.subscription.usageLimit ?? "无限制"}
+                {newSubData.usageLimit ?? "无限制"}
 
                 <div className="text-nowrap">使用期限</div>
                 <div>:</div>
-                {newSubData.subscription.expireAt ? new Date(newSubData.subscription.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "无限制"}
+                {newSubData.expireAt ? new Date(newSubData.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "无限制"}
                 <div className="text-nowrap">排序</div>
                 <div>:</div>
-                {newSubData.subscription.sort ?? "默认排序"}
+                {newSubData.sort ?? "默认排序"}
             </div>
             <div className="flex justify-end gap-3">
                 {
@@ -173,8 +174,8 @@ function usageLimitValidation(value: string) {
     const v = value.trim()
     return (v.length === 0 || /^[1-9]\d*$/.test(v))
 }
-function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps) {
-    const [newSubData, setNewSubData] = useState(subData)
+function FormModal({ remove, title, item: subData, onSave, onDelete }: FormModalProps) {
+    const [newSubData, setNewSubData] = useState<UpdateItemRequest>({ ...subData })
     const [loading, setLoading] = useState(false)
     const handleSave = async () => {
         if (onSave) {
@@ -207,11 +208,10 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
         <Box component="form" className="flex flex-col gap-3 p-3" onSubmit={handleSave}>
             <div className="grid grid-cols-[auto_1fr] items-center gap-3">
                 <div>启用</div>
-                <Switch disabled={loading} checked={newSubData.subscription.enabled} onChange={(event) => {
+                <Switch disabled={loading} checked={newSubData.enabled} onChange={(event) => {
                     setNewSubData((prev => {
                         return {
-                            ...prev,
-                            subscription: { ...prev.subscription, enabled: event.target.checked }
+                            ...prev, enabled: event.target.checked
                         }
                     }))
                 }} />
@@ -220,17 +220,16 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                     size="small"
                     required
                     disabled={loading}
-                    value={newSubData.subscription.name}
+                    value={newSubData.name}
                     onChange={(event) => {
                         setNewSubData((prev => ({
-                            ...prev,
-                            subscription: { ...prev.subscription, name: event.target.value }
+                            ...prev, name: event.target.value
                         })))
                     }}
-                    error={!nameValidation(newSubData.subscription.name)}
+                    error={!nameValidation(newSubData.name)}
 
                     helperText={
-                        !nameValidation(newSubData.subscription.name) ? "名称不能为空" : null
+                        !nameValidation(newSubData.name) ? "名称不能为空" : null
                     } />
                 <div>次数</div>
                 <TextField
@@ -238,17 +237,14 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                     disabled={loading}
                     type="text"
                     placeholder="无限制 请留空"
-                    value={newSubData.subscription.usageLimit ?? ""}
+                    value={newSubData.usageLimit ?? ""}
                     onChange={(event) => {
                         const value = event.target.value
                         if (!usageLimitValidation(value)) return
-                        setNewSubData(prev => ({
+                        setNewSubData((prev => ({
                             ...prev,
-                            subscription: {
-                                ...prev.subscription,
-                                usageLimit: value === "" ? null : Number(value)
-                            }
-                        }))
+                            usageLimit: value === "" ? null : Number(value)
+                        })))
                     }}
                 />
                 <div>有效期</div>
@@ -256,32 +252,27 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                     size="small"
                     disabled={loading}
                     type="datetime-local"
-                    value={newSubData.subscription.expireAt ? new Date(newSubData.subscription.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""}
+                    value={newSubData.expireAt ? new Date(newSubData.expireAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ""}
                     onChange={(event) => {
                         const value = event.target.value
                         setNewSubData(prev => ({
                             ...prev,
-                            subscription: {
-                                ...prev.subscription,
-                                expireAt: value ? new Date(value).getTime() : null
-                            }
+                            expireAt: value ? new Date(value).getTime() : null
                         }))
                     }}
                 />
                 <div>排序</div>
                 <TextField
                     size="small"
-                    required
+                    type="text"
                     disabled={loading}
-                    value={newSubData.subscription.sort}
+                    value={newSubData.sort ?? ""}
                     onChange={(event) => {
                         setNewSubData((prev => ({
                             ...prev,
-                            subscription: {
-                                ...prev.subscription,
-                                sort: event.target.value.trim() || null
-                            }
-                        })))
+                            sort: event.target.value.trim() || null
+                        }
+                        )))
                     }}
                     placeholder="用,分割排序"
                 />
@@ -291,7 +282,7 @@ function FormModal({ remove, title, subData, onSave, onDelete }: FormModalProps)
                     onDelete && <Button loading={loading} color="error" variant="contained" onClick={() => handleDelete()}>删除</Button>
                 }
                 {
-                    onSave && <Button disabled={!isChanges || !nameValidation(newSubData.subscription.name) || newSubData.subscription.usageLimit != null && !usageLimitValidation(String(newSubData.subscription.usageLimit))} type="submit" loading={loading} color="primary" variant="contained" onClick={() => handleSave()}>保存</Button>
+                    onSave && <Button disabled={!isChanges || !nameValidation(newSubData.name) || newSubData.usageLimit != null && !usageLimitValidation(String(newSubData.usageLimit))} type="submit" loading={loading} color="primary" variant="contained" onClick={() => handleSave()}>保存</Button>
                 }
             </div>
         </Box>
@@ -312,7 +303,7 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
     })
 
     const configMutation = useMutation({
-        mutationFn: (config: SubConfig) => subApi.updateSubConfig(config),
+        mutationFn: (config: UpdateConfigRequest) => subApi.updateSubConfig(config),
         onSuccess: () => {
             configQuery.refetch()
         }
@@ -320,14 +311,14 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
 
 
     const addSubscription = useMutation({
-        mutationFn: (subscription: Subscription) => subApi.addSub(subscription),
+        mutationFn: (subscription: AddItemRequest) => subApi.addSub(subscription),
         onSuccess: () => {
             dataQuery.refetch()
         }
     })
 
     const updateSubscription = useMutation({
-        mutationFn: ({ subData }: { subData: SubData }) => subApi.updateSub(subData),
+        mutationFn: ({ subData }: { subData: UpdateItemRequest }) => subApi.updateSub(subData),
         onSuccess: () => {
             dataQuery.refetch()
         }
@@ -346,8 +337,8 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
     const [searchValus, setSearchValus] = useState("")
     const filterData = useMemo(() => {
         if (dataQuery.isSuccess) {
-            return Object.entries(dataQuery.data).filter(([id, item]) => {
-                const keyword = `${id.trim()}${item.name?.trim()}${item.enabled ? "on" : "off"}`
+            return dataQuery.data.filter((item) => {
+                const keyword = `${item.uuid.trim()}${item.name?.trim()}${item.enabled ? "on" : "off"}`
                 return keyword.toLowerCase().includes(searchValus.trim().toLowerCase())
             })
         }
@@ -361,22 +352,21 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
             modal.open(({ remove }) => (<SettingsModal remove={remove} config={configQuery.data} save={(config) => configMutation.mutateAsync(config)} />))
     }
 
-    const openDetailModal = (subData: SubData) => {
-        modal.open(({ remove }) => <DetailModal remove={remove} subData={subData} onSave={(subData) => updateSubscription.mutateAsync({ subData })} onDelete={(uuid) => deleteSubscription.mutateAsync(uuid)} api={subApi} />)
+    const openDetailModal = (subData: ItemResponse) => {
+        modal.open(({ remove }) => <DetailModal remove={remove} item={subData} onSave={(subData) => updateSubscription.mutateAsync({ subData })} onDelete={(uuid) => deleteSubscription.mutateAsync(uuid)} api={subApi} />)
     }
     const openAddModal = () => {
         modal.open(({ remove }) =>
             <FormModal
                 title={"新增订阅"}
-                subData={{
-                    uuid: "", subscription: {
-                        enabled: false,
-                        name: "",
-                        expireAt: null,
-                        usageLimit: null,
-                        sort: null
-                    }
-                }} remove={remove} onSave={(subData) => addSubscription.mutateAsync(subData.subscription)} />, { onMaskClick: () => { } })
+                item={{
+                    uuid: "",
+                    enabled: true,
+                    name: "",
+                    expireAt: null,
+                    usageLimit: null,
+                    sort: null
+                }} remove={remove} onSave={(subData) => addSubscription.mutateAsync(subData)} />, { onMaskClick: () => { } })
     }
 
     return <AcitonCard className="w-full" acitonBarProps={{ title: "订阅", action: <ActionButtons /> }}>
@@ -398,9 +388,9 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                     filterData.length === 0 ? <EmptyState tip="没有数据" /> :
                                         <div>
                                             {
-                                                filterData.map(([uuid, subscription], index) => {
+                                                filterData.map((item, index) => {
                                                     const sort =
-                                                        subscription.sort?.trim()
+                                                        item.sort?.trim()
 
                                                     const query = new URLSearchParams()
 
@@ -408,31 +398,31 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                                         query.set("sort", sort)
                                                     }
 
-                                                    return <div key={uuid} className="hover:bg-gray-100">
+                                                    return <div key={item.uuid} className="hover:bg-gray-100">
                                                         {index > 0 && <Divider />}
                                                         <div className="flex flex-row p-3 items-center" >
                                                             <Typography component={"div"} className="flex-1">
                                                                 <div className="flex-1 grid grid-cols-[auto_auto_auto_1fr] gap-x-3 items-center">
                                                                     <div className="text-nowrap">名称</div>
                                                                     <div>:</div>
-                                                                    <Typography color={subscription.enabled ? "primary" : "error"}>{subscription.name}</Typography>
+                                                                    <Typography color={item.enabled ? "primary" : "error"}>{item.name}</Typography>
                                                                     <div></div>
 
                                                                     <div className="text-nowrap">UUID</div>
                                                                     <div>:</div>
-                                                                    <p>{uuid}</p>
+                                                                    <p>{item.uuid}</p>
                                                                     <div></div>
 
                                                                     <div className="text-nowrap">订阅</div>
                                                                     <div>:</div>
-                                                                    <Typography onClick={e => e.stopPropagation()} component="a" href={getUseSubApiUrl(pluginId, uuid)} target="_blank" rel="noreferrer" color="primary" sx={{ textDecoration: 'underline', wordBreak: 'break-all' }}>
-                                                                        <p>{`api/${pluginId}/useSub/${uuid}${query.toString() ? `?${query}` : ""}`}</p>
+                                                                    <Typography onClick={e => e.stopPropagation()} component="a" href={getUseSubApiUrl(pluginId, item.uuid)} target="_blank" rel="noreferrer" color="primary" sx={{ textDecoration: 'underline', wordBreak: 'break-all' }}>
+                                                                        <p>{`api/${pluginId}/useSub/${item.uuid}${query.toString() ? `?${query}` : ""}`}</p>
                                                                     </Typography>
                                                                     <div>
                                                                         <Tooltip title="复制订阅">
                                                                             <IconButton color="primary" onClick={async () => {
                                                                                 try {
-                                                                                    await navigator.clipboard.writeText(getUseSubApiUrl(pluginId, uuid))
+                                                                                    await navigator.clipboard.writeText(getUseSubApiUrl(pluginId, item.uuid))
                                                                                     enqueueSnackbar("复制成功", { variant: "success" });
                                                                                 } catch (err) {
                                                                                     let message = "复制失败"
@@ -448,7 +438,7 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
 
                                                                 </div>
                                                             </Typography>
-                                                            <Button variant="contained" startIcon={<DocsIcon />} onClick={() => openDetailModal({ uuid, subscription })}>
+                                                            <Button variant="contained" startIcon={<DocsIcon />} onClick={() => openDetailModal(item)}>
                                                                 查看订阅
                                                             </Button>
                                                         </div>

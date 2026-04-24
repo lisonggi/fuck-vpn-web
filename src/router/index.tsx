@@ -1,13 +1,13 @@
 import { Typography } from "@mui/material";
 import { createBrowserRouter, redirect, type RouteObject, } from "react-router";
-import { AuthApi, type Token } from "../api/AuthApi";
+import { AuthApi, type UserConfigResponse } from "../api/AuthApi";
+import { FlashOnIcon, HomeIcon, SecurityIcon } from "../assets/icons/Icons";
 import { AdminPage } from "../pages/AdminPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PluginPage } from "../pages/PluginPage";
 import { SecurityPage } from "../pages/SecurityPage";
 import { TestPage } from "../pages/TestPage";
-import { HomeIcon, SecurityIcon, FlashOnIcon } from "../assets/icons/Icons";
 
 export const adminChildren: RouteObject[] = [
     {
@@ -62,8 +62,8 @@ export const router = createBrowserRouter([
         children: adminChildren,
         loader: async () => {
             try {
-                const token: Token = await AuthApi().me()
-                return { token }
+                const response: UserConfigResponse = await AuthApi().me()
+                return { username: response.username }
             } catch {
                 return redirect("/login")
             }

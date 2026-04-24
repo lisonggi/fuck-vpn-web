@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AppIconButton, type AppIconButtonProps } from "./AppIconButton";
 
 
-export function LoadingIconButtion({ onClick, loading: controlledLoading, iconSize = "24px", sx, ...props }: AppIconButtonProps & { onClick?: () => Promise<void>, loading?: boolean, iconSize?: string }) {
+export function LoadingIconButtion({ onClick, loading: controlledLoading, iconSize = "24px", sx, ...props }: AppIconButtonProps & { onClick?: () => Promise<unknown>, loading?: boolean, iconSize?: string }) {
     const [innerLoading, setInnerLoading] = useState(false)
 
     const loading =

@@ -123,15 +123,15 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
                                                         <div className="flex flex-row p-3 items-center" >
                                                             <Typography component={"div"} className="flex-1">
                                                                 <div className="flex-1 grid grid-cols-[auto_auto_auto_1fr] gap-x-3 items-center">
-                                                                    <div className="text-nowrap">名称</div>
+                                                                    <div>名称</div>
                                                                     <div>:</div>
                                                                     <Typography color={item.enabled ? "primary" : "error"}>{item.name}</Typography>
                                                                     <div></div>
-                                                                    <div className="text-nowrap">UUID</div>
+                                                                    <div>UUID</div>
                                                                     <div>:</div>
-                                                                    <p>{item.uuid}</p>
+                                                                    <Typography className="wrap-anywhere">{item.uuid}</Typography>
                                                                     <div></div>
-                                                                    <div className="text-nowrap">订阅</div>
+                                                                    <div >订阅</div>
                                                                     <div>:</div>
                                                                     <Typography onClick={e => e.stopPropagation()} component="a" href={link} target="_blank" rel="noreferrer" color="primary" sx={{ textDecoration: 'underline', wordBreak: 'break-all' }}>
                                                                         <p>{link}</p>

@@ -9,7 +9,7 @@ export interface ModalItem extends ModalOpenOptions {
     hideThis: () => void
     removeThis: () => void
 }
-
+let idSeed = 0
 export function ModalProvider({ children }: { children: ReactNode }) {
     const [modals, setModals] = useState<Map<string, ModalItem>>(new Map())
     const downOnMask = useRef(false)
@@ -55,7 +55,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
     const create = (content: ContentType, options?: ModalOpenOptions): ModalControl => {
         assertSafeCall("create")
-        const id = crypto.randomUUID()
+        const id = `modal_${++idSeed}`
         setModals(prev => {
             const next = new Map(prev)
             next.set(id, {

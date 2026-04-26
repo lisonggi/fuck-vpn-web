@@ -58,13 +58,12 @@ export function AdminPage() {
     const { username } = useLoaderData();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const queryClient = useQueryClient();
-    const { data, isLoading, isError, refetch } = useQuery({
+    const configQuery = useQuery({
         queryKey: [PLUGIN_QUERY_KEY],
         queryFn: PluginApi().getAllPluginConfig
     });
     const theme = useTheme()
-    const [closePluginButtonLoading, setClosePluginButtonLoading] = useState(false)
-    const mutation = useMutation({
+    const updateConfigMutation = useMutation({
         mutationFn: ({ id, config }: { id: string; config: PluginUpdateConfigRequest }) =>
             PluginApi().updatePluginConfig(id, config),
         onSuccess: (result, request) => {
@@ -86,7 +85,7 @@ export function AdminPage() {
         adminChildren.forEach(children => {
             const Icon = children.handle.icon
             if (children.id === "plugin") {
-                data?.forEach(plugin => {
+                configQuery.data?.forEach(plugin => {
                     pluginMenuitems.push({
                         path: plugin.pluginInfo.id,
                         name: plugin.pluginInfo.name,
@@ -105,7 +104,7 @@ export function AdminPage() {
         });
         const allMenuGroup: MenuGroup[] = [{ menuItems: baseMenuItems }, { menuItems: pluginMenuitems }]
         return allMenuGroup
-    }, [data]);
+    }, [configQuery.data]);
     const selectedItem: MenuItem | undefined = useMemo(() => {
         const allMenuItems = menuGroup.flatMap((group) => group.menuItems)
         const currentMatch = matches[matches.length - 1].pathname
@@ -114,14 +113,14 @@ export function AdminPage() {
     }, [menuGroup, matches])
 
     useEffect(() => {
-        if (!isLoading && !selectedItem) {
+        if (!configQuery.isLoading && !selectedItem) {
             navigate("/404", { replace: true })
         }
-    }, [isLoading, navigate, selectedItem])
+    }, [configQuery.isLoading, navigate, selectedItem])
 
-    if (isLoading || isError) {
+    if (configQuery.isLoading || configQuery.isError) {
         return <div className="h-dvh w-full">
-            <LoadingPage isError={isError} isLoading={isLoading} onRefetch={refetch} />
+            <LoadingPage isError={configQuery.isError} isLoading={configQuery.isLoading} onRefetch={configQuery.refetch} />
         </div>
     }
 
@@ -148,18 +147,8 @@ export function AdminPage() {
         }
     }
 
-    const updateStateConfig = async (id: string, enabled: boolean) => {
-        await mutation.mutateAsync({ id, config: { enabled } })
-    }
+    const pluginInfo: PluginConfigResponse | undefined = configQuery.data?.find(item => item.pluginInfo.id === selectedItem.path)
 
-    const pluginInfo: PluginConfigResponse | undefined = data?.find(item => item.pluginInfo.id === selectedItem.path)
-
-    const handelLoadingIconButtionClick = async () => {
-        setClosePluginButtonLoading(true)
-        await updateStateConfig(selectedItem.path, false).finally(() => {
-            setClosePluginButtonLoading(false)
-        })
-    }
     const openInfoModal = () => {
         if (pluginInfo) {
             modal.open(({ remove }) => (<InfoModal remove={remove} pluginInfo={pluginInfo} />))
@@ -179,14 +168,20 @@ export function AdminPage() {
                     </IconButton>
                 </Tooltip>
                 {pluginInfo.enabled && (
-                    <LoadingIconButtion icon={PowerIcon} loading={closePluginButtonLoading} onClick={handelLoadingIconButtionClick} tip="停用此插件" />
+                    <LoadingIconButtion icon={PowerIcon} onClick={() => updateConfigMutation.mutateAsync({
+                        id: selectedItem.path,
+                        config: { enabled: false }
+                    })} tip="停用此插件" />
                 )}
             </div>
         ) : undefined
     }
     return (<div className="h-dvh w-full">
         <AcitonCard className="size-full" acitonBarProps={acitonBarProps}>
-            {pluginInfo === undefined || pluginInfo.enabled ? <Outlet context={pluginInfo} /> : <PluginNotEnabled onEnabledClick={() => updateStateConfig(selectedItem.path, true)}></PluginNotEnabled>}
+            {pluginInfo === undefined || pluginInfo.enabled ? <Outlet context={pluginInfo} /> : <PluginNotEnabled onEnabledClick={() => updateConfigMutation.mutateAsync({
+                id: selectedItem.path,
+                config: { enabled: true }
+            })}></PluginNotEnabled>}
         </AcitonCard>
         <MenuDrawer {...menuDrawerProps} />
     </div>)

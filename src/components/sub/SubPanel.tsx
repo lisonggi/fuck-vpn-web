@@ -1,5 +1,5 @@
 import { Button, Divider, IconButton, TextField, Tooltip, Typography } from "@mui/material"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { enqueueSnackbar } from "notistack"
 import { useMemo, useState } from "react"
 
@@ -28,33 +28,45 @@ export function SubPanel({ pluginId }: { pluginId: string }) {
         queryKey: ["subscriptions", pluginId],
         queryFn: () => subscriptionApi.getAllItem(), enabled: configQuery.isSuccess && configQuery.data.enabled
     })
-
+    const queryClient = useQueryClient();
     const updateConfigMutation = useMutation({
         mutationFn: (config: SubscriptionConfigModel) => subscriptionApi.updateConfig(config),
-        onSuccess: () => {
-            configQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<SubscriptionConfigModel>(["subConfig", pluginId], data)
         }
     })
 
 
     const addItemMutation = useMutation({
         mutationFn: (item: Omit<SubscriptionItemModel, "uuid">) => subscriptionApi.addItem(item),
-        onSuccess: () => {
-            allItemQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<Required<SubscriptionItemModel>[]>(
+                ["subscriptions", pluginId],
+                (old = []) => [...old, data]
+            )
         }
     })
 
     const updateItemMutation = useMutation({
         mutationFn: (item: SubscriptionItemModel) => subscriptionApi.updateItem(item),
-        onSuccess: () => {
-            allItemQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<Required<SubscriptionItemModel>[]>(
+                ["subscriptions", pluginId],
+                (old = []) =>
+                    old.map(item =>
+                        item.uuid === data.uuid ? data : item
+                    )
+            )
         }
     })
 
     const deleteItemMutation = useMutation({
         mutationFn: (uuid: string) => subscriptionApi.deleteItem(uuid),
-        onSuccess: () => {
-            allItemQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<Required<SubscriptionItemModel>[]>(
+                ["subscriptions", pluginId],
+                (old = []) => old.filter(item => item.uuid !== data.uuid)
+            )
         }
     })
 

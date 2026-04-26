@@ -1,7 +1,7 @@
 import { Button, Divider, FormControlLabel, Switch, TextField, Typography } from "@mui/material";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { KeyApi, type KeyUpdateConfigRequest } from "../api/KeyApi";
+import { KeyApi, type KeyConfigResponse, type KeyUpdateConfigRequest } from "../api/KeyApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
 import { AcitonCard } from "./common/AcitonCard";
@@ -64,10 +64,10 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
     const keyApi = KeyApi(pluginId)
     const prevGeneratingRef = useRef<boolean | undefined>(undefined);
 
-    const stateQuery = useQuery({
-        queryKey: ["keyState", pluginId],
+    const configQuery = useQuery({
+        queryKey: ["keyConfig", pluginId],
         queryFn: () => keyApi.getConfig(),
-        refetchInterval: (data) => ((data?.checking ? 2000 : false)),
+        refetchInterval: (data) => ((data?.checking ? 3000 : false)),
         onSuccess: (data) => {
             if (prevGeneratingRef.current && !data.checking) {
                 dataQuery.refetch()
@@ -75,40 +75,38 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
             prevGeneratingRef.current = data.checking;
         }
     })
-
     const dataQuery = useQuery({
         queryKey: ["keys", pluginId],
-        queryFn: () => keyApi.getAllItem()
+        queryFn: () => keyApi.getAllItem(),
     })
-
-
+    const queryClient = useQueryClient();
     const updateKeyConfig = useMutation({
         mutationFn: (config: KeyUpdateConfigRequest) => keyApi.updateConfig(config),
-        onSuccess: () => {
-            stateQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<KeyConfigResponse>(["keyConfig", pluginId], data)
         }
     })
 
     const refreshKeys = useMutation({
         mutationFn: () => keyApi.refresh(),
-        onSuccess: () => {
-            stateQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<KeyConfigResponse>(["keyConfig", pluginId], data)
         }
     });
 
 
     const openSettingsModal = () => {
-        if (stateQuery.isSuccess) {
-            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data?.config} remove={remove} onSave={(config) => updateKeyConfig.mutateAsync(config)} />), {
+        if (configQuery.isSuccess) {
+            modal.open(({ remove }) => (<SettingsModal config={configQuery.data?.config} remove={remove} onSave={(config) => updateKeyConfig.mutateAsync(config)} />), {
                 onMaskClick: () => { }
             })
         }
     }
 
     return <AcitonCard className="w-full" acitonBarProps={{
-        title: "密钥", action: stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
+        title: "密钥", action: configQuery.isLoading ? <div>正在加载</div> : configQuery.isError ? <div>加载失败</div> : <>
             <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
-            <LoadingIconButtion onClick={() => refreshKeys.mutateAsync()} loading={stateQuery.data.checking} icon={RefreshIcon} tip="重新获取" />
+            <LoadingIconButtion onClick={() => refreshKeys.mutateAsync()} loading={configQuery.data.checking} icon={RefreshIcon} tip="重新获取" />
         </>
     }}>
         {dataQuery.isLoading ?

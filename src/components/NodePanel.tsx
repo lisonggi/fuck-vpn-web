@@ -1,5 +1,5 @@
 import { Button, Divider, FormControlLabel, Switch, TextField, Typography } from "@mui/material";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { NodeApi, type NodeConfigResponse, type NodeUpdateConfigRequest } from "../api/NodeApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
@@ -63,8 +63,8 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
     const nodeApi = NodeApi(pluginId)
     const prevGeneratingRef = useRef<boolean | undefined>(undefined);
 
-    const stateQuery = useQuery({
-        queryKey: ["nodeState", pluginId],
+    const configQuery = useQuery({
+        queryKey: ["nodeConfig", pluginId],
         queryFn: () => nodeApi.getConfig(),
         refetchInterval: (data) => ((data?.generating ? 2000 : false)),
         onSuccess: (data) => {
@@ -79,24 +79,24 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
         queryKey: ["nodes", pluginId],
         queryFn: () => nodeApi.getAllNode()
     })
-
+    const queryClient = useQueryClient();
     const updateNodeConfig = useMutation({
         mutationFn: (config: NodeUpdateConfigRequest) => nodeApi.updateConfig(config),
-        onSuccess: () => {
-            stateQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<NodeConfigResponse>(["nodeConfig", pluginId], data)
         }
     })
 
     const refreshNodes = useMutation({
         mutationFn: () => nodeApi.refresh(),
-        onSuccess: () => {
-            stateQuery.refetch()
+        onSuccess: (data) => {
+            queryClient.setQueryData<NodeConfigResponse>(["nodeConfig", pluginId], data)
         }
     });
 
     const openSettingsModal = () => {
-        if (stateQuery.isSuccess) {
-            modal.open(({ remove }) => (<SettingsModal config={stateQuery.data.config} remove={remove} onSave={(config) => updateNodeConfig.mutateAsync(config)} />), {
+        if (configQuery.isSuccess) {
+            modal.open(({ remove }) => (<SettingsModal config={configQuery.data.config} remove={remove} onSave={(config) => updateNodeConfig.mutateAsync(config)} />), {
                 onMaskClick: () => { }
             })
         }
@@ -104,9 +104,9 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
 
     return <>
         <AcitonCard className="w-full" acitonBarProps={{
-            title: "节点", action: stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
+            title: "节点", action: configQuery.isLoading ? <div>正在加载</div> : configQuery.isError ? <div>加载失败</div> : <>
                 <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
-                <LoadingIconButtion onClick={() => refreshNodes.mutateAsync()} loading={stateQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
+                <LoadingIconButtion onClick={() => refreshNodes.mutateAsync()} loading={configQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
             </>
         }}>
             {dataQuery.isLoading ? <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> : dataQuery.isError ? <IconText Icon={HourglassIcon} text="加载失败" color="primary" /> : dataQuery.data.length === 0 ? <EmptyState tip="没有数据" /> : <div>{dataQuery.data.map((value, index) => {

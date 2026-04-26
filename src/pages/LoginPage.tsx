@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "../api/Api";
 import { AuthApi } from "../api/AuthApi";
-import { AppCard } from "../components/AppCard";
+import { AppCard } from "../components/common/AppCard";
 
 export function LoginPage() {
 

@@ -1,6 +1,6 @@
 import { Button } from "@mui/material";
 import { useState } from "react";
-import { FlashOffIcon } from "../assets/icons/Icons";
+import { FlashOffIcon } from "../../assets/icons/Icons";
 
 export function PluginNotEnabled({ onEnabledClick }: { onEnabledClick: () => Promise<void> }) {
     const [loading, setLoading] = useState(false)

@@ -1,4 +1,4 @@
-import { BoxIcon } from "../assets/icons/Icons";
+import { BoxIcon } from "../../assets/icons/Icons";
 import { IconText } from "./IconText";
 
 export function EmptyState({ tip, className }: { tip: string, className?: string }) {

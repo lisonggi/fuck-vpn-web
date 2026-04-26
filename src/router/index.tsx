@@ -1,5 +1,7 @@
 import { Typography } from "@mui/material";
+import { enqueueSnackbar } from "notistack";
 import { createBrowserRouter, redirect, type RouteObject, } from "react-router";
+import { ApiError } from "../api/Api";
 import { AuthApi, type UserConfigResponse } from "../api/AuthApi";
 import { FlashOnIcon, HomeIcon, SecurityIcon } from "../assets/icons/Icons";
 import { AdminPage } from "../pages/AdminPage";
@@ -7,7 +9,6 @@ import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PluginPage } from "../pages/PluginPage";
 import { SecurityPage } from "../pages/SecurityPage";
-import { TestPage } from "../pages/TestPage";
 
 export const adminChildren: RouteObject[] = [
     {
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
         loader: async () => {
             try {
                 await AuthApi().me({ silent: true });
+                enqueueSnackbar("认证成功", { variant: "info" })
                 return redirect("/admin");
             } catch {
                 return null;
@@ -63,18 +65,21 @@ export const router = createBrowserRouter([
         loader: async () => {
             try {
                 const response: UserConfigResponse = await AuthApi().me()
+                enqueueSnackbar(`欢迎回来 ${response.username}`, { variant: "success" })
                 return { username: response.username }
-            } catch {
+            } catch (e) {
+                if (e instanceof ApiError)
+                    enqueueSnackbar(e.result.body, { variant: "error" })
                 return redirect("/login")
             }
         },
         hydrateFallbackElement: <div>加载中</div>,
         errorElement: <div>错误</div>,
     },
-    {
-        path: "/test",
-        Component: TestPage
-    },
+    // {
+    //     path: "/test",
+    //     Component: TestPage
+    // },
     {
         path: "*",
         Component: NotFoundPage

@@ -3,7 +3,7 @@ import { useOutletContext, useParams } from "react-router"
 import type { PluginConfigResponse } from "../api/PluginApi"
 import { KeyPanel } from "../components/KeyPanel"
 import { NodePanel } from "../components/NodePanel"
-import { SubPanel } from "../components/SubPanel"
+import { SubPanel } from "../components/sub/SubPanel"
 
 
 

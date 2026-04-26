@@ -4,12 +4,12 @@ import { useMemo, useRef, useState } from "react";
 import { NodeApi, type NodeConfigResponse, type NodeUpdateConfigRequest } from "../api/NodeApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
-import { AcitonCard } from "./AcitonCard";
-import { AppIconButton } from "./AppIconButton";
-import { AppWindow } from "./AppWindow";
-import { EmptyState } from "./EmptyState";
-import { IconText } from "./IconText";
-import { LoadingIconButtion } from "./LoadingIconButtion";
+import { IconText } from "./common/IconText";
+import { AppIconButton } from "./common/AppIconButton";
+import { AcitonCard } from "./common/AcitonCard";
+import { AcitonWindow } from "./common/AcitonWindow";
+import { EmptyState } from "./common/EmptyState";
+import { LoadingIconButtion } from "./common/LoadingIconButtion";
 
 function SettingsModal({ config, remove, onSave }: { config: NodeUpdateConfigRequest, remove: () => void, onSave: (config: NodeUpdateConfigRequest) => Promise<NodeConfigResponse> }) {
     const [newConfig, setNewConfig] = useState<NodeUpdateConfigRequest>(config)
@@ -26,7 +26,7 @@ function SettingsModal({ config, remove, onSave }: { config: NodeUpdateConfigReq
         return JSON.stringify(newConfig) !== JSON.stringify(config)
     }, [config, newConfig])
 
-    return <AppWindow title="节点配置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
+    return <AcitonWindow title="节点配置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
         <div className="p-3 min-w-80">
             <Typography sx={{ fontSize: "0.9rem" }}>开启时系统按照周期执行重新获取</Typography>
             <div className="flex flex-col gap-3">
@@ -56,7 +56,7 @@ function SettingsModal({ config, remove, onSave }: { config: NodeUpdateConfigReq
                 </div>
             </div>
         </div>
-    </AppWindow>
+    </AcitonWindow>
 }
 export function NodePanel({ pluginId }: { pluginId: string }) {
     const modal = useModal()
@@ -65,7 +65,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
 
     const stateQuery = useQuery({
         queryKey: ["nodeState", pluginId],
-        queryFn: () => nodeApi.getNodeConfig(),
+        queryFn: () => nodeApi.getConfig(),
         refetchInterval: (data) => ((data?.generating ? 2000 : false)),
         onSuccess: (data) => {
             if (prevGeneratingRef.current && !data.generating) {
@@ -77,18 +77,18 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
 
     const dataQuery = useQuery({
         queryKey: ["nodes", pluginId],
-        queryFn: () => nodeApi.getNodes()
+        queryFn: () => nodeApi.getAllNode()
     })
 
     const updateNodeConfig = useMutation({
-        mutationFn: (config: NodeUpdateConfigRequest) => nodeApi.updateNodeConfig(config),
+        mutationFn: (config: NodeUpdateConfigRequest) => nodeApi.updateConfig(config),
         onSuccess: () => {
             stateQuery.refetch()
         }
     })
 
     const refreshNodes = useMutation({
-        mutationFn: () => nodeApi.refreshNodes(),
+        mutationFn: () => nodeApi.refresh(),
         onSuccess: () => {
             stateQuery.refetch()
         }
@@ -106,7 +106,7 @@ export function NodePanel({ pluginId }: { pluginId: string }) {
         <AcitonCard className="w-full" acitonBarProps={{
             title: "节点", action: stateQuery.isLoading ? <div>正在加载</div> : stateQuery.isError ? <div>加载失败</div> : <>
                 <AppIconButton onClick={openSettingsModal} icon={SettingsIcon} tip="设置" />
-                <LoadingIconButtion onClick={  ()=>refreshNodes.mutateAsync()} loading={stateQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
+                <LoadingIconButtion onClick={() => refreshNodes.mutateAsync()} loading={stateQuery.data.generating} icon={RefreshIcon} tip="重新获取" />
             </>
         }}>
             {dataQuery.isLoading ? <IconText Icon={HourglassIcon} text="正在加载" color="primary" /> : dataQuery.isError ? <IconText Icon={HourglassIcon} text="加载失败" color="primary" /> : dataQuery.data.length === 0 ? <EmptyState tip="没有数据" /> : <div>{dataQuery.data.map((value, index) => {

@@ -4,12 +4,12 @@ import { useMemo, useRef, useState } from "react";
 import { KeyApi, type KeyUpdateConfigRequest } from "../api/KeyApi";
 import { HourglassIcon, RefreshIcon, SettingsIcon } from "../assets/icons/Icons";
 import { useModal } from "../hooks/useModal";
-import { AcitonCard } from "./AcitonCard";
-import { AppIconButton } from "./AppIconButton";
-import { AppWindow } from "./AppWindow";
-import { EmptyState } from "./EmptyState";
-import { IconText } from "./IconText";
-import { LoadingIconButtion } from "./LoadingIconButtion";
+import { AcitonCard } from "./common/AcitonCard";
+import { AppIconButton } from "./common/AppIconButton";
+import { AcitonWindow } from "./common/AcitonWindow";
+import { EmptyState } from "./common/EmptyState";
+import { IconText } from "./common/IconText";
+import { LoadingIconButtion } from "./common/LoadingIconButtion";
 
 
 function SettingsModal({ config, remove, onSave }: { config: KeyUpdateConfigRequest, remove: () => void, onSave: (config: KeyUpdateConfigRequest) => Promise<unknown> }) {
@@ -26,7 +26,7 @@ function SettingsModal({ config, remove, onSave }: { config: KeyUpdateConfigRequ
     const isChanges = useMemo(() => {
         return JSON.stringify(newConfig) !== JSON.stringify(config)
     }, [config, newConfig])
-    return <AppWindow title="密钥配置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
+    return <AcitonWindow title="密钥配置" closeWindow={{ onClose: () => remove(), disabled: saveLoading }}>
         <div className="p-3 min-w-80">
             <Typography sx={{ fontSize: "0.9rem" }}>开启时密钥不足时系统将自动补充</Typography>
             <div className="flex flex-col gap-3">
@@ -56,7 +56,7 @@ function SettingsModal({ config, remove, onSave }: { config: KeyUpdateConfigRequ
                 </div>
             </div>
         </div>
-    </AppWindow >
+    </AcitonWindow >
 }
 
 export function KeyPanel({ pluginId }: { pluginId: string }) {
@@ -66,7 +66,7 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
     const stateQuery = useQuery({
         queryKey: ["keyState", pluginId],
-        queryFn: () => keyApi.getKeyConfig(),
+        queryFn: () => keyApi.getConfig(),
         refetchInterval: (data) => ((data?.checking ? 2000 : false)),
         onSuccess: (data) => {
             if (prevGeneratingRef.current && !data.checking) {
@@ -78,19 +78,19 @@ export function KeyPanel({ pluginId }: { pluginId: string }) {
 
     const dataQuery = useQuery({
         queryKey: ["keys", pluginId],
-        queryFn: () => keyApi.getKeys()
+        queryFn: () => keyApi.getAllItem()
     })
 
 
     const updateKeyConfig = useMutation({
-        mutationFn: (config: KeyUpdateConfigRequest) => keyApi.updateKeyConfig(config),
+        mutationFn: (config: KeyUpdateConfigRequest) => keyApi.updateConfig(config),
         onSuccess: () => {
             stateQuery.refetch()
         }
     })
 
     const refreshKeys = useMutation({
-        mutationFn: () => keyApi.refreshKeys(),
+        mutationFn: () => keyApi.refresh(),
         onSuccess: () => {
             stateQuery.refetch()
         }

@@ -1,6 +1,6 @@
 import { IconButton, Tooltip, useTheme, type IconButtonProps } from "@mui/material";
 import { isValidElement, type ElementType, type ReactNode } from "react";
-import { DefaultIcon } from "../assets/icons/Icons";
+import { DefaultIcon } from "../../assets/icons/Icons";
 
 export type AppIconButtonProps = {
     icon?: ElementType | ReactNode

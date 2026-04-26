@@ -5,19 +5,20 @@ import { Outlet, useLoaderData, useMatches, useNavigate } from "react-router";
 import { AuthApi } from "../api/AuthApi";
 import { PluginApi, type PluginConfigResponse, type PluginUpdateConfigRequest } from "../api/PluginApi";
 import { InfoIcon, MenuIcon, PowerIcon } from "../assets/icons/Icons";
-import { AcitonCard } from "../components/AcitonCard";
-import { type AcitonBarProps } from "../components/ActionBar";
-import { AppWindow } from "../components/AppWindow";
-import { LoadingIconButtion } from "../components/LoadingIconButtion";
-import { MenuDrawer, type MenuDrawerProps, type MenuGroup, type MenuItem } from "../components/MenuDrawer";
-import { PluginNotEnabled } from "../components/PluginNotEnabled";
+import { AcitonCard } from "../components/common/AcitonCard";
+import { type AcitonBarProps } from "../components/common/ActionBar";
+import { AcitonWindow } from "../components/common/AcitonWindow";
+import { LoadingIconButtion } from "../components/common/LoadingIconButtion";
+import { MenuDrawer, type MenuDrawerProps, type MenuGroup, type MenuItem } from "../components/common/MenuDrawer";
+import { PluginNotEnabled } from "../components/common/PluginNotEnabled";
 import { useModal } from "../hooks/useModal";
 import { adminChildren } from "../router";
 import { LoadingPage } from "./LoadingPage";
+import { enqueueSnackbar } from "notistack";
 
 const PLUGIN_QUERY_KEY = "getAllPlugin"
 function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: PluginConfigResponse }) {
-    return <AppWindow title="插件信息" closeWindow={{ onClose: () => remove() }}>
+    return <AcitonWindow title="插件信息" closeWindow={{ onClose: () => remove() }}>
         <Typography component="div" className="p-3">
             <div className="grid grid-cols-[auto_auto_1fr] gap-x-3 p-3 border-gray-200 border-dashed border-2 rounded-md  text-nowrap">
                 <div className="text-gray-500">名称</div>
@@ -50,7 +51,7 @@ function InfoModal({ remove, pluginInfo }: { remove: () => void, pluginInfo: Plu
             </div>
         </Typography>
 
-    </AppWindow>
+    </AcitonWindow>
 }
 export function AdminPage() {
     const modal = useModal()
@@ -142,6 +143,7 @@ export function AdminPage() {
         username: username,
         onLogoutClick: async () => {
             await AuthApi().logout()
+            enqueueSnackbar(`再见 ${username}`, { variant: "info" })
             navigate("/login")
         }
     }

@@ -17,24 +17,24 @@ export interface NodeUpdateConfigRequest {
 }
 
 export const NodeApi = (id: string) => {
-    const getNodeConfig = async () => {
+    const getConfig = async () => {
         const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/getNodeConfig`)
         return result.body as NodeConfigResponse
     }
-    const getNodes = async () => {
+    const getAllNode = async () => {
         const result = await AppApi<Result<string[]>>(`/${id}/getNodes`)
         return result.body as string[]
     }
-    const refreshNodes = async () => {
+    const refresh = async () => {
         const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/refreshNodes`, { method: "POST" })
         return result.body as NodeConfigResponse
     }
-    const updateNodeConfig = async (config: NodeUpdateConfigRequest) => {
+    const updateConfig = async (config: NodeUpdateConfigRequest) => {
         const result = await AppApi<Result<NodeConfigResponse>>(`/${id}/updateNodeConfig`, {
             method: "PUT",
             body: JSON.stringify(config)
         })
         return result.body as NodeConfigResponse
     }
-    return { getNodeConfig, getNodes, refreshNodes, updateNodeConfig }
+    return { getConfig, getAllNode, refresh, updateConfig }
 }

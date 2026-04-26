@@ -1,8 +1,8 @@
 import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, useTheme } from "@mui/material";
 import { useState } from "react";
 import { Fragment, type JSX } from "react/jsx-runtime";
-import { LogoutIcon } from "../assets/icons/Icons";
 import { LoadingIconButtion } from "./LoadingIconButtion";
+import { LogoutIcon } from "../../assets/icons/Icons";
 
 export interface MenuGroup {
     menuItems: MenuItem[]
